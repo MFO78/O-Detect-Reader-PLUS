@@ -2920,45 +2920,42 @@
             const esc = (s) => String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
             const baseFont = getExportFontSize();
-            const titleFontSize = Math.round(baseFont * 1.45);
+            const titleFontSize = Math.round(baseFont * 1.4);
             const sub1FontSize = Math.round(baseFont * 1.0);
             const sub2FontSize = Math.round(baseFont * 0.9);
             const axisTitleSize = Math.round(baseFont * 1.15);
             const axisTickSize = baseFont;
             const legendFontSize = Math.round(baseFont * 0.9);
             const resolvedTitle = getChartTitle(plotId, chartTitle || plotId);
-            const canvasH = plotId === 'plotOverview' ? 1200 : 600;
 
             let titleHtml = `<b>${esc(resolvedTitle)}</b>`;
-            let titleLinesHeight = Math.round(titleFontSize * 1.45);
+            let titleBlockHeight = Math.round(titleFontSize * 1.45);
             if (metric) {
                 const nomText = !isNaN(metric.nom) ? `${metric.nom.toFixed(3)}${metric.unit}` : '--';
                 const line1 = `Avg: ${metric.avg.toFixed(3)}${metric.unit}   |   Nom: ${nomText}`;
                 const line2 = formatMetricFailsSummary(metric);
                 titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
                 titleHtml += `<br><span style="font-size:${sub2FontSize}px;color:${subColor}">${esc(line2)}</span>`;
-                titleLinesHeight += Math.round((sub1FontSize + sub2FontSize) * 1.45);
+                titleBlockHeight += Math.round((sub1FontSize + sub2FontSize) * 1.45);
             } else if (plotId === 'plotOverview') {
                 const partNo = UI.inpPartNum.value.trim() || 'N/A';
                 const serialNo = UI.inpSerialNum.value.trim() || 'N/A';
                 const line1 = `Part: ${partNo}   |   Serial: ${serialNo}   |   Points: ${State.rawPoints.length}   |   Apertures: ${State.apertures.length}`;
                 titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
-                titleLinesHeight += Math.round(sub1FontSize * 1.45);
+                titleBlockHeight += Math.round(sub1FontSize * 1.45);
             }
 
-            // Push title downward from top edge so ascenders of large fonts never clip
-            const titleTopOffsetPx = Math.round(titleFontSize * 0.75 + 22);
-            const titleY = Math.max(0.84, 1 - (titleTopOffsetPx / canvasH));
-
+            // Generous top padding inside the 2400x800 (3:1) canvas so title ascenders never clip
+            const titlePadTop = Math.round(titleFontSize * 0.8 + 28);
             exportLayout.title = {
                 text: titleHtml,
                 font: { size: titleFontSize, color: theme.fontColor },
                 x: 0.5,
                 xanchor: 'center',
-                y: titleY,
+                y: 0.96,
                 yref: 'container',
                 yanchor: 'top',
-                pad: { t: 0, b: Math.round(baseFont * 0.6) }
+                pad: { t: titlePadTop, b: Math.round(baseFont * 0.6) }
             };
 
             const scaleAxisFonts = (ax, titleSize = axisTitleSize, tickSize = axisTickSize, enableAutoMargin = true) => {
@@ -2997,12 +2994,11 @@
                 }
             });
 
-            // Generous dynamic margins below the lowered title block
-            const topMargin = Math.max(135, titleTopOffsetPx + titleLinesHeight + Math.round(baseFont * 0.8) + 20);
-            const leftMargin = Math.max(110, Math.round(axisTitleSize + axisTickSize * 3.2 + 40));
-            const rightMargin = Math.max(55, Math.round(baseFont * 1.5 + 25));
-            const bottomMargin = Math.max(95, Math.round(axisTitleSize + axisTickSize * 2.2 + 40));
-            const marginPad = Math.max(8, Math.round(baseFont * 0.35));
+            const topMargin = Math.max(160, titlePadTop + titleBlockHeight + Math.round(baseFont * 1.0) + 45);
+            const leftMargin = Math.max(120, Math.round(axisTitleSize + axisTickSize * 3.2 + 45));
+            const rightMargin = Math.max(60, Math.round(baseFont * 1.5 + 30));
+            const bottomMargin = Math.max(105, Math.round(axisTitleSize + axisTickSize * 2.2 + 45));
+            const marginPad = Math.max(10, Math.round(baseFont * 0.35));
 
             if (plotId === 'plotOverview') {
                 exportLayout.margin = exportLayout.scene
@@ -3023,8 +3019,8 @@
 
             const resolvedTitle = getChartTitle(plotId, chartTitle);
             const safeFilename = `${partNum}_${serialNum}_${sanitizeFilenamePart(resolvedTitle)}.png`;
-            const pxW = plotId === 'plotOverview' ? 1600 : 1800;
-            const pxH = plotId === 'plotOverview' ? 1200 : 600;
+            const pxW = plotId === 'plotOverview' ? 1600 : 2400;
+            const pxH = plotId === 'plotOverview' ? 1200 : 800;
             const payload = buildExportChartPayload(el, plotId, resolvedTitle);
             const pngDataUrl = await Plotly.toImage(payload, { format: 'png', width: pxW, height: pxH });
 
@@ -3242,8 +3238,8 @@
                     }
                 }
 
-                const pxWidth = p.id === 'plotOverview' ? 1800 : 2100;
-                const pxHeight = p.id === 'plotOverview' ? Math.round((p.h / printWidth) * pxWidth) : 700;
+                const pxWidth = p.id === 'plotOverview' ? 1800 : 2400;
+                const pxHeight = p.id === 'plotOverview' ? Math.round((p.h / printWidth) * pxWidth) : 800;
                 const imgUrl = await Plotly.toImage({ data: exportData, layout: exportLayout }, { format: 'jpeg', width: pxWidth, height: pxHeight });
 
                 doc.addImage(imgUrl, 'JPEG', margin, cursorY, printWidth, p.h);
@@ -3441,8 +3437,8 @@
                     const plotEl = document.getElementById(p.id);
                     if (!plotEl || !plotEl.layout) continue;
 
-                    const pxW = p.id === 'plotOverview' ? 1600 : 1800;
-                    const pxH = p.id === 'plotOverview' ? 1200 : 600;
+                    const pxW = p.id === 'plotOverview' ? 1600 : 2400;
+                    const pxH = p.id === 'plotOverview' ? 1200 : 800;
                     const payload = buildExportChartPayload(plotEl, p.id, p.title);
                     const pngDataUrl = await Plotly.toImage(payload, {
                         format: 'png',
