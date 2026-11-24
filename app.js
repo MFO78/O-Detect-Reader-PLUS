@@ -2927,6 +2927,7 @@
             const axisTickSize = baseFont;
             const legendFontSize = Math.round(baseFont * 0.9);
             const resolvedTitle = getChartTitle(plotId, chartTitle || plotId);
+            const canvasH = plotId === 'plotOverview' ? 1200 : 600;
 
             let titleHtml = `<b>${esc(resolvedTitle)}</b>`;
             let titleLinesHeight = Math.round(titleFontSize * 1.45);
@@ -2945,14 +2946,19 @@
                 titleLinesHeight += Math.round(sub1FontSize * 1.45);
             }
 
+            // Push title downward from top edge so ascenders of large fonts never clip
+            const titleTopOffsetPx = Math.round(titleFontSize * 0.75 + 22);
+            const titleY = Math.max(0.84, 1 - (titleTopOffsetPx / canvasH));
+
             exportLayout.title = {
                 text: titleHtml,
                 font: { size: titleFontSize, color: theme.fontColor },
                 x: 0.5,
                 xanchor: 'center',
-                y: 0.98,
+                y: titleY,
+                yref: 'container',
                 yanchor: 'top',
-                pad: { t: Math.round(baseFont * 0.4), b: Math.round(baseFont * 0.6) }
+                pad: { t: 0, b: Math.round(baseFont * 0.6) }
             };
 
             const scaleAxisFonts = (ax, titleSize = axisTitleSize, tickSize = axisTickSize, enableAutoMargin = true) => {
@@ -2991,8 +2997,8 @@
                 }
             });
 
-            // Generous dynamic padding so large titles and axis labels never clip
-            const topMargin = Math.max(120, titleLinesHeight + Math.round(baseFont * 1.6) + 32);
+            // Generous dynamic margins below the lowered title block
+            const topMargin = Math.max(135, titleTopOffsetPx + titleLinesHeight + Math.round(baseFont * 0.8) + 20);
             const leftMargin = Math.max(110, Math.round(axisTitleSize + axisTickSize * 3.2 + 40));
             const rightMargin = Math.max(55, Math.round(baseFont * 1.5 + 25));
             const bottomMargin = Math.max(95, Math.round(axisTitleSize + axisTickSize * 2.2 + 40));
