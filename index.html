@@ -1,1 +1,623 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aperture Tolerance Analyzer - AF Engineering Tools</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <!-- Plotly.js for 2D/3D charting -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer crossorigin="anonymous"></script>
+    <!-- jsPDF & AutoTable for PDF reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" defer crossorigin="anonymous"></script>
+    <!-- JSZip for automatic ZIP fallback when direct folder access is restricted -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer crossorigin="anonymous"></script>
+    <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="h-screen w-full flex flex-col md:flex-row overflow-hidden text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 transition-colors duration-200">
+
+    <!-- Mobile Backdrop for Sidebar Drawer -->
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden md:hidden" onclick="closeMobileSidebar()"></div>
+
+    <!-- Sidebar Controls (Responsive Drawer on Mobile, Docked on Desktop) -->
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 w-80 max-w-[88vw] h-full glass-panel flex flex-col border-r border-slate-200 dark:border-slate-700 shrink-0 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-center transition-colors">
+            <div class="min-w-0 pr-2">
+                <h1 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight truncate">
+                    <i class="fa-solid fa-layer-group text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true"></i>
+                    <span class="truncate">Aperture Tolerance Analyzer</span>
+                </h1>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 uppercase tracking-wider font-semibold truncate" id="sidebarCompanyText">AF ENGINEERING TOOLS</p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+                <button type="button" id="btnThemeToggle" onclick="toggleTheme()" aria-label="Toggle Light/Dark Theme" title="Toggle Theme" class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 p-2 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                    <i class="fa-solid fa-moon dark:hidden" aria-hidden="true"></i>
+                    <i class="fa-solid fa-sun hidden dark:block" aria-hidden="true"></i>
+                </button>
+                <button type="button" id="btnCloseMobileSidebar" onclick="closeMobileSidebar()" aria-label="Close Menu" class="md:hidden text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 p-2 rounded-full transition-colors">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-5 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+
+            <!-- Part Info -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Part Info</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="inpPartNum" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Part Number</label>
+                        <input type="text" id="inpPartNum" placeholder="e.g. PN-123" class="block w-full text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="inpSerialNum" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Serial No.</label>
+                        <input type="text" id="inpSerialNum" placeholder="e.g. SN-456" class="block w-full text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="inpComments" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Comments</label>
+                    <textarea id="inpComments" rows="2" placeholder="Optional notes..." class="block w-full text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md custom-scrollbar dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Data Source -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">1. Data Source</h2>
+                <div>
+                    <label for="fileInput" class="block text-sm font-medium mb-1 dark:text-slate-200">Upload XYZ File (.txt, .csv)</label>
+                    <input type="file" id="fileInput" accept=".txt,.csv" class="sr-only peer">
+                    <label for="fileInput" class="flex items-center w-full border border-slate-300 dark:border-slate-600 rounded-md overflow-hidden cursor-pointer bg-white dark:bg-slate-800/60 hover:border-blue-400 dark:hover:border-blue-500 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 transition-colors">
+                        <span class="py-2 px-3.5 text-sm font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-r border-slate-300 dark:border-slate-600 shrink-0 transition-colors">Choose file</span>
+                        <span id="loadedFileName" aria-live="polite" class="px-3 text-sm text-slate-400 dark:text-slate-400 truncate flex-1" title="No file chosen">No file chosen</span>
+                    </label>
+                    <p class="text-xs text-slate-400 mt-1">Format: X Y Z (space, comma, or semicolon separated)</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded border border-slate-200 dark:border-slate-700">
+                    <label class="flex items-center gap-1.5 cursor-pointer" title="Flip the sign of all X coordinates globally">
+                        <input type="checkbox" id="chkInvertX" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600" onchange="applyModificationsAndProcess()">
+                        <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wide">Invert X (-X)</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer" title="Flip the sign of all Y coordinates globally">
+                        <input type="checkbox" id="chkInvertY" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600" onchange="applyModificationsAndProcess()">
+                        <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wide">Invert Y (-Y)</span>
+                    </label>
+                </div>
+
+                <div class="relative flex items-center py-1">
+                    <div class="flex-grow border-t border-slate-300 dark:border-slate-700"></div>
+                    <span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase">or</span>
+                    <div class="flex-grow border-t border-slate-300 dark:border-slate-700"></div>
+                </div>
+                <button type="button" id="btnLoadSample" class="w-full py-2 px-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-600">
+                    <i class="fa-solid fa-flask" aria-hidden="true"></i> Load Sample Data
+                </button>
+            </div>
+
+            <!-- Configuration -->
+            <div class="space-y-3">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">2. Configuration</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="col-span-2">
+                        <label for="inpThreshold" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Aperture Split Distance</label>
+                        <input type="number" id="inpThreshold" step="any" placeholder="Auto-detect" class="block w-full text-sm p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white">
+                    </div>
+                    <div>
+                        <label for="selUnits" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Units</label>
+                        <select id="selUnits" onchange="onUnitChange()" class="block w-full text-sm p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white">
+                            <option value="mm" selected>mm</option>
+                            <option value="µm">µm</option>
+                            <option value="in">in</option>
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 -mt-1.5 leading-tight">Max distance between consecutive points before starting a new aperture.</p>
+
+                <!-- Multi-Axis Lattice Direction & Target Angle Override -->
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <div class="col-span-2">
+                        <label for="selLatticeAxis" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Lattice Direction</label>
+                        <select id="selLatticeAxis" onchange="onLatticeAxisChange()" class="block w-full text-xs p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white">
+                            <option value="auto">Auto (Primary)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="inpTargetAngle" class="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300" title="Optional angle lock in degrees (e.g. 30 for a 30° hexagonal lattice)">Target °</label>
+                        <input type="number" id="inpTargetAngle" step="any" placeholder="Auto" oninput="onTargetAngleChange()" class="block w-full text-xs p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white">
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 -mt-1.5 leading-tight">Switch detected lattice basis axes or enter a Target ° (e.g. 30) to lock direction.</p>
+
+                <div class="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded text-xs text-blue-700 dark:text-blue-400">
+                    <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i> Multi-axis clustering detects all near-equidistant lattice directions to prevent 30°/90° snapping.
+                </div>
+
+                <button type="button" id="btnProcess" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-md transition-colors text-sm font-semibold shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-gears" aria-hidden="true"></i> Process Coordinates
+                </button>
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" id="btnExportSettings" onclick="exportSettings()" class="py-1.5 px-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-xs font-medium border border-slate-300 dark:border-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i> Export Cfg
+                    </button>
+                    <button type="button" onclick="document.getElementById('inpImportSettings').click()" class="py-1.5 px-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded text-xs font-medium border border-slate-300 dark:border-slate-600 flex items-center justify-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-upload" aria-hidden="true"></i> Import Cfg
+                    </button>
+                    <input type="file" id="inpImportSettings" accept=".json" class="hidden" onchange="importSettings(event)">
+                </div>
+            </div>
+
+            <!-- Summary Panel -->
+            <div id="summaryPanel" class="space-y-3 hidden border-t border-slate-200 dark:border-slate-700 pt-5 mt-2">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data Summary</h2>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-2 rounded border border-slate-200 dark:border-slate-700">
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Total Points</span>
+                        <span id="statTotalPoints" aria-live="polite" class="font-bold text-slate-800 dark:text-slate-200">0</span>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-2 rounded border border-slate-200 dark:border-slate-700">
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Apertures</span>
+                        <span id="statApertures" aria-live="polite" class="font-bold text-slate-800 dark:text-slate-200">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div id="exportPanel" class="space-y-3 hidden border-t border-slate-200 dark:border-slate-700 pt-5 mt-2">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">3. Export</h2>
+
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-700">
+                    <label for="inpCompanyName" class="block text-xs font-medium mb-1.5 text-slate-700 dark:text-slate-300">Company Name</label>
+                    <input type="text" id="inpCompanyName" placeholder="AF ENGINEERING TOOLS" class="block w-full text-sm p-1.5 mb-3 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+
+                    <label for="inpAccentColor" class="block text-xs font-medium mb-1.5 text-slate-700 dark:text-slate-300">Report Theme (Accent Color)</label>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="color" id="inpAccentColor" value="#276193" class="w-7 h-7 rounded cursor-pointer border border-slate-300 dark:border-slate-600 p-0 shadow-sm" title="Accent color for PDF headers">
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Header Base Color</span>
+                    </div>
+
+                    <label for="inpExportFontSize" class="block text-xs font-medium mb-1.5 text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-slate-600 pt-2">Export Chart Font Size (px)</label>
+                    <div class="flex items-center gap-2 mb-3">
+                        <input type="number" id="inpExportFontSize" value="20" min="10" max="48" step="1" class="w-20 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500" title="Base font size (px) for exported PNG and PDF charts">
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">3:1 Aspect Ratio (2D)</span>
+                    </div>
+
+                    <label for="inpLogoUpload" class="block text-xs font-medium mb-1.5 text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-slate-600 pt-2">Custom Report Logo (Optional)</label>
+                    <input type="file" id="inpLogoUpload" accept=".png,.jpg,.jpeg" class="block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-slate-200 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-300 dark:hover:file:bg-slate-600 cursor-pointer">
+                    <div id="logoPreviewContainer" class="hidden mt-2 p-1.5 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 flex justify-between items-center shadow-sm">
+                        <img id="logoPreview" alt="Report Logo Preview" class="max-h-8 max-w-[120px] object-contain">
+                        <button type="button" id="btnRemoveLogo" aria-label="Remove Logo" class="text-slate-400 hover:text-red-500 px-2 py-0.5 transition-colors" title="Remove Logo"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+
+                <button type="button" id="btnDownloadPDF" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white rounded-md transition-colors text-sm font-semibold shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF Report
+                </button>
+                <button type="button" id="btnExportToFolder" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-md transition-colors text-sm font-semibold shadow-sm flex items-center justify-center gap-2" title="Save all chart PNGs, PDF report, input file, and config JSON into a Part_Serial subfolder">
+                    <i class="fa-solid fa-folder-plus" aria-hidden="true"></i> Save All to Folder
+                </button>
+                <div id="savedFolderBar" class="hidden items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[11px]">
+                    <div class="flex items-center gap-1.5 min-w-0 text-slate-600 dark:text-slate-300" title="Remembered export destination folder">
+                        <i class="fa-solid fa-folder-open text-indigo-500 dark:text-indigo-400 shrink-0" aria-hidden="true"></i>
+                        <span id="savedFolderName" aria-live="polite" class="truncate font-medium"></span>
+                    </div>
+                    <button id="btnChangeExportFolder" type="button" class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0" title="Choose a different parent folder">Change</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 h-full overflow-y-auto custom-scrollbar p-4 md:p-6 bg-slate-100 dark:bg-slate-900 flex flex-col gap-6 relative transition-colors" id="mainContainer">
+
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 shrink-0 sticky top-0 z-30 transition-colors gap-2 flex-wrap">
+            <button type="button" id="btnToggleSidebar" aria-label="Toggle Sidebar Menu" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-2 font-medium text-sm border border-slate-300 dark:border-slate-600 shadow-sm" title="Toggle Sidebar">
+                <i class="fa-solid fa-bars-staggered" aria-hidden="true"></i> <span class="hidden sm:inline">Toggle Menu</span>
+            </button>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <button type="button" id="btnRestoreCharts" onclick="restoreDefaultCharts()" class="hidden text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline mr-1"><i class="fa-solid fa-rotate-left mr-1" aria-hidden="true"></i> Restore Hidden Charts</button>
+                <div class="flex items-center gap-1.5">
+                    <label for="inp2DMarkerSize" class="hidden sm:block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">2D Pts:</label>
+                    <input type="number" id="inp2DMarkerSize" value="4" min="1" max="15" class="w-12 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500 shadow-sm text-center" onchange="update2DCharts()" title="2D Chart Marker Size">
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <label for="selLayoutMode" class="hidden sm:block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Layout:</label>
+                    <select id="selLayoutMode" class="text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm font-medium">
+                        <option value="grid">Grid</option>
+                        <option value="full">Full Width (Stack)</option>
+                        <option value="split" selected>Pinned 3D (Split Screen)</option>
+                        <option value="pinned-top">Pinned 3D (Top Bar)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-900 z-10 transition-colors py-12">
+            <div class="text-center max-w-md p-8 glass-panel rounded-xl shadow-lg">
+                <i class="fa-solid fa-cubes text-5xl text-blue-500 mb-4" aria-hidden="true"></i>
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Aperture Tolerance Analyzer</h2>
+                <p class="text-slate-600 dark:text-slate-400 mb-6 text-sm">Upload a text file of raw XYZ measurements to extract array stepping logic and monitor manufacturing tolerances of specific features across the array.</p>
+                <p class="text-slate-500 dark:text-slate-500 text-xs mb-5">Use the sidebar to load your data or generate a sample dataset to test the features.</p>
+                <button type="button" onclick="generateSampleData()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold shadow-sm transition-colors inline-flex items-center gap-2">
+                    <i class="fa-solid fa-flask" aria-hidden="true"></i> Try Sample Dataset
+                </button>
+            </div>
+        </div>
+
+        <div id="layoutWrapper" class="flex flex-col gap-6 w-full min-h-full relative hidden">
+            <!-- 3D Overview Chart -->
+            <div class="glass-panel rounded-lg p-4 shadow-sm w-full hidden flex-col transition-colors" id="cardOverview">
+                <div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 shrink-0">
+                    <h3 class="text-lg font-semibold flex items-center shrink-0 dark:text-slate-100">
+                        <i class="fa-solid fa-cube text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotOverview" value="3D Array Overview" aria-label="Edit 3D Array Overview chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotOverview', this.value)">
+                    </h3>
+
+                    <div class="flex flex-wrap items-center gap-2 text-xs bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full xl:w-auto">
+                        <div class="flex items-center border-r border-slate-300 dark:border-slate-600 pr-2 gap-1 flex-wrap">
+                            <span class="text-slate-500 dark:text-slate-400 font-medium mr-1">View:</span>
+                            <button type="button" onclick="set3DView('xy')" class="bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors" title="Top (XY)">XY</button>
+                            <button type="button" onclick="set3DView('xz')" class="bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors" title="Front (XZ)">XZ</button>
+                            <button type="button" onclick="set3DView('yz')" class="bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors" title="Side (YZ)">YZ</button>
+                            <button type="button" onclick="set3DView('iso')" class="bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors" title="Isometric">Iso</button>
+                            <button type="button" id="btnEqualAxes" class="bg-blue-100 dark:bg-blue-900/50 hover:bg-slate-300 dark:hover:bg-slate-500 text-blue-700 dark:text-blue-300 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors ml-1" title="Toggle Equal Axes (1:1:1)">1:1:1</button>
+                        </div>
+
+                        <div class="flex flex-wrap items-center border-r border-slate-300 dark:border-slate-600 pr-2 gap-2">
+                            <div class="flex items-center gap-1" title="Points Color">
+                                <input type="color" id="inpMarkerColor" value="#3b82f6" aria-label="Points Color" class="w-5 h-5 rounded cursor-pointer border border-slate-300 dark:border-slate-600 p-0" onchange="update3DOverview()">
+                            </div>
+                            <div class="flex items-center gap-1" title="Centroid Color">
+                                <input type="color" id="inpCentroidColor" value="#94a3b8" aria-label="Centroid Color" class="w-5 h-5 rounded cursor-pointer border border-slate-300 dark:border-slate-600 p-0" onchange="update3DOverview()">
+                            </div>
+                            <div class="flex items-center gap-1" title="Marker Size">
+                                <span class="text-slate-500 dark:text-slate-400">Pts:</span>
+                                <input type="number" id="inpMarkerSize" value="2" min="1" max="15" aria-label="Points Marker Size" class="w-10 p-1 border border-slate-300 dark:border-slate-600 rounded text-center dark:bg-slate-700 dark:text-white" onchange="update3DOverview()">
+                            </div>
+                            <div class="flex items-center gap-1" title="Centroid Marker Size">
+                                <span class="text-slate-500 dark:text-slate-400">Ctrs:</span>
+                                <input type="number" id="inpCentroidSize" value="3" min="1" max="20" aria-label="Centroid Marker Size" class="w-10 p-1 border border-slate-300 dark:border-slate-600 rounded text-center dark:bg-slate-700 dark:text-white" onchange="update3DOverview()">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 pl-1 flex-wrap">
+                            <label class="flex items-center gap-1 cursor-pointer" title="Show Aperture Numbers">
+                                <input type="checkbox" id="chkShowLabels" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600" onchange="update3DOverview()">
+                                <span class="text-slate-600 dark:text-slate-300 text-xs font-medium">Labels</span>
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer" title="Highlight Out-of-Tolerance Apertures">
+                                <input type="checkbox" id="chkHighlightTol" class="rounded text-red-500 focus:ring-red-500 dark:bg-slate-700 dark:border-slate-600" onchange="update3DOverview()" checked>
+                                <span class="text-slate-600 dark:text-slate-300 text-xs font-medium">Fails</span>
+                            </label>
+                            <!-- Fail Filter Dropdown -->
+                            <div id="failFilterContainer" class="hidden items-center ml-1 relative">
+                                <button type="button" id="btnFailFilter" class="text-xs bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 shadow-sm transition-colors">
+                                    Filter Fails <i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i>
+                                </button>
+                                <div id="dropdownFailFilter" class="absolute top-full right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-md p-2 z-50 hidden min-w-[180px]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D Overview Legend -->
+                <div id="overviewLegend" class="hidden flex flex-wrap items-center gap-4 text-[10px] font-medium text-slate-600 dark:text-slate-300 mt-1 mb-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 w-fit">
+                    <div class="flex items-center gap-1.5"><span id="legBase" class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #3b82f6;"></span> Normal Points</div>
+                    <div class="flex items-center gap-1.5 border-r border-slate-300 dark:border-slate-600 pr-3"><span id="legCentroid" class="w-2.5 h-2.5 transform rotate-45 shadow-sm" style="background-color: #94a3b8;"></span> Centroid</div>
+                    <div class="leg-fail flex items-center gap-1.5 hidden"><span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #eab308;"></span> T1</div>
+                    <div class="leg-fail flex items-center gap-1.5 hidden"><span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #f97316;"></span> T2</div>
+                    <div class="leg-fail flex items-center gap-1.5 hidden"><span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #ef4444;"></span> T3</div>
+                </div>
+
+                <!-- Wrapper for absolute sizing to prevent Plotly resize loops -->
+                <div id="overviewChartWrapper" class="relative w-full flex-1 mt-1">
+                    <div id="plotOverview" class="absolute inset-0"></div>
+                </div>
+            </div>
+
+            <div id="chartsScrollContainer" class="flex flex-col gap-6 w-full transition-colors">
+                <!-- Stepping Charts (X, Y, Angle) -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 hidden chart-controls transition-colors" id="cardSteps">
+
+                    <!-- X-Lattice -->
+                    <div id="wrapper_stepX" class="glass-panel rounded-lg p-4 shadow-sm flex flex-col w-full relative">
+                        <button type="button" aria-label="Hide X-Lattice Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotStepX', 'wrapper_stepX', 'stepX')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
+                            <div class="w-full break-words min-w-0 pr-6">
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-left-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepX" value="X-Lattice" aria-label="Edit X-Lattice chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotStepX', this.value)"></h3>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400">Absolute X distance to the primary neighbor.</p>
+                                <div id="stats_stepX" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full">
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Data<br>Filter</span>
+                                    <input type="number" id="fMinStepX" placeholder="Min" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data below this value">
+                                    <input type="number" id="fMaxStepX" placeholder="Max" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data above this value">
+                                </div>
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Axis<br>Scale</span>
+                                    <input type="number" id="minStepX" placeholder="Min" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotStepX', 'minStepX', 'maxStepX')">
+                                    <input type="number" id="maxStepX" placeholder="Max" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotStepX', 'minStepX', 'maxStepX')">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inpNomStepX" placeholder="Nom" step="any" class="w-14 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">&plusmn;</span>
+                                    <input type="number" id="inpTol1StepX" placeholder="T1" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol2StepX" placeholder="T2" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol3StepX" placeholder="T3" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <button type="button" onclick="autoFillSigmaTolerances('stepX')" class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 rounded transition-colors" title="Auto-fill T2 (1σ) &amp; T3 (3σ) from empirical distribution">&sigma;</button>
+                                </div>
+                                <div class="border-l border-slate-300 dark:border-slate-600 pl-1">
+                                    <button type="button" onclick="downloadPlot('plotStepX', 'X-Lattice')" aria-label="Download X-Lattice PNG" class="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1" title="Download PNG"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="plotStepX" class="w-full flex-1 min-h-[250px]"></div>
+                    </div>
+
+                    <!-- Y-Lattice -->
+                    <div id="wrapper_stepY" class="glass-panel rounded-lg p-4 shadow-sm flex flex-col w-full relative">
+                        <button type="button" aria-label="Hide Y-Lattice Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotStepY', 'wrapper_stepY', 'stepY')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
+                            <div class="w-full break-words min-w-0 pr-6">
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-up-down text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepY" value="Y-Lattice" aria-label="Edit Y-Lattice chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotStepY', this.value)"></h3>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400">Absolute Y distance to the primary neighbor.</p>
+                                <div id="stats_stepY" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full">
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Data<br>Filter</span>
+                                    <input type="number" id="fMinStepY" placeholder="Min" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data below this value">
+                                    <input type="number" id="fMaxStepY" placeholder="Max" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data above this value">
+                                </div>
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Axis<br>Scale</span>
+                                    <input type="number" id="minStepY" placeholder="Min" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotStepY', 'minStepY', 'maxStepY')">
+                                    <input type="number" id="maxStepY" placeholder="Max" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotStepY', 'minStepY', 'maxStepY')">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inpNomStepY" placeholder="Nom" step="any" class="w-14 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">&plusmn;</span>
+                                    <input type="number" id="inpTol1StepY" placeholder="T1" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol2StepY" placeholder="T2" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol3StepY" placeholder="T3" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <button type="button" onclick="autoFillSigmaTolerances('stepY')" class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 rounded transition-colors" title="Auto-fill T2 (1σ) &amp; T3 (3σ) from empirical distribution">&sigma;</button>
+                                </div>
+                                <div class="border-l border-slate-300 dark:border-slate-600 pl-1">
+                                    <button type="button" onclick="downloadPlot('plotStepY', 'Y-Lattice')" aria-label="Download Y-Lattice PNG" class="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1" title="Download PNG"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="plotStepY" class="w-full flex-1 min-h-[250px]"></div>
+                    </div>
+
+                    <!-- Lattice Angle -->
+                    <div id="wrapper_angle" class="glass-panel rounded-lg p-4 shadow-sm flex flex-col w-full relative">
+                        <button type="button" aria-label="Hide Lattice Angle Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotAngle', 'wrapper_angle', 'angle')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
+                            <div class="w-full break-words min-w-0 pr-6">
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-angle-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotAngle" value="Lattice Angle" aria-label="Edit Lattice Angle chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotAngle', this.value)"></h3>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400">Vector angle of the primary step.</p>
+                                <div id="stats_angle" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full">
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Data<br>Filter</span>
+                                    <input type="number" id="fMinAngle" placeholder="Min" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data below this value">
+                                    <input type="number" id="fMaxAngle" placeholder="Max" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderStepPlots()" title="Exclude data above this value">
+                                </div>
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Axis<br>Scale</span>
+                                    <input type="number" id="minAngle" placeholder="Min" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotAngle', 'minAngle', 'maxAngle')">
+                                    <input type="number" id="maxAngle" placeholder="Max" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotAngle', 'minAngle', 'maxAngle')">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inpNomAngle" placeholder="Nom" step="any" class="w-14 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">&plusmn;</span>
+                                    <input type="number" id="inpTol1Angle" placeholder="T1" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol2Angle" placeholder="T2" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol3Angle" placeholder="T3" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderStepPlots()">
+                                    <button type="button" onclick="autoFillSigmaTolerances('angle')" class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 rounded transition-colors" title="Auto-fill T2 (1σ) &amp; T3 (3σ) from empirical distribution">&sigma;</button>
+                                </div>
+                                <div class="border-l border-slate-300 dark:border-slate-600 pl-1">
+                                    <button type="button" onclick="downloadPlot('plotAngle', 'Lattice_Angle')" aria-label="Download Lattice Angle PNG" class="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1" title="Download PNG"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="plotAngle" class="w-full flex-1 min-h-[250px]"></div>
+                    </div>
+                </div>
+
+                <!-- Bounding Box Charts (Width and Height) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 hidden chart-controls transition-colors" id="cardBB">
+
+                    <!-- Aperture Width -->
+                    <div id="wrapper_bbX" class="glass-panel rounded-lg p-4 shadow-sm flex flex-col w-full relative">
+                        <button type="button" aria-label="Hide Aperture Width Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotBBX', 'wrapper_bbX', 'bbX')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
+                            <div class="w-full break-words min-w-0 pr-6">
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBX" value="Aperture Width" aria-label="Edit Aperture Width chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotBBX', this.value)"></h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Maximum span in the X-axis for each aperture.</p>
+                                <div id="stats_bbX" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full">
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Data<br>Filter</span>
+                                    <input type="number" id="fMinBBX" placeholder="Min" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <input type="number" id="fMaxBBX" placeholder="Max" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                </div>
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Axis<br>Scale</span>
+                                    <input type="number" id="minBBX" placeholder="Min" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotBBX', 'minBBX', 'maxBBX')">
+                                    <input type="number" id="maxBBX" placeholder="Max" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotBBX', 'minBBX', 'maxBBX')">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inpNomBBX" placeholder="Nom" step="any" class="w-14 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">&plusmn;</span>
+                                    <input type="number" id="inpTol1BBX" placeholder="T1" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol2BBX" placeholder="T2" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol3BBX" placeholder="T3" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <button type="button" onclick="autoFillSigmaTolerances('bbX')" class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 rounded transition-colors" title="Auto-fill T2 (1σ) &amp; T3 (3σ) from empirical distribution">&sigma;</button>
+                                </div>
+                                <div class="border-l border-slate-300 dark:border-slate-600 pl-1">
+                                    <button type="button" onclick="downloadPlot('plotBBX', 'Aperture_Width')" aria-label="Download Aperture Width PNG" class="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1" title="Download PNG"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="plotBBX" class="w-full flex-1 min-h-[300px]"></div>
+                    </div>
+
+                    <!-- Aperture Height -->
+                    <div id="wrapper_bbY" class="glass-panel rounded-lg p-4 shadow-sm flex flex-col w-full relative">
+                        <button type="button" aria-label="Hide Aperture Height Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotBBY', 'wrapper_bbY', 'bbY')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
+                            <div class="w-full break-words min-w-0 pr-6">
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBY" value="Aperture Height" aria-label="Edit Aperture Height chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotBBY', this.value)"></h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Maximum span in the Y-axis for each aperture.</p>
+                                <div id="stats_bbY" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full">
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Data<br>Filter</span>
+                                    <input type="number" id="fMinBBY" placeholder="Min" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <input type="number" id="fMaxBBY" placeholder="Max" step="any" class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                </div>
+                                <div class="flex items-center gap-1 border-r border-slate-300 dark:border-slate-600 pr-2">
+                                    <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase text-center leading-tight">Axis<br>Scale</span>
+                                    <input type="number" id="minBBY" placeholder="Min" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotBBY', 'minBBY', 'maxBBY')">
+                                    <input type="number" id="maxBBY" placeholder="Max" step="any" class="dark:bg-slate-700 dark:border-slate-600 dark:text-white" onchange="applyScale('plotBBY', 'minBBY', 'maxBBY')">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="inpNomBBY" placeholder="Nom" step="any" class="w-14 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">&plusmn;</span>
+                                    <input type="number" id="inpTol1BBY" placeholder="T1" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol2BBY" placeholder="T2" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <span class="text-[10px] text-slate-400">/</span>
+                                    <input type="number" id="inpTol3BBY" placeholder="T3" step="any" class="w-12 dark:bg-slate-700 dark:border-slate-600 dark:text-white" oninput="debouncedRenderBBPlots()">
+                                    <button type="button" onclick="autoFillSigmaTolerances('bbY')" class="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 rounded transition-colors" title="Auto-fill T2 (1σ) &amp; T3 (3σ) from empirical distribution">&sigma;</button>
+                                </div>
+                                <div class="border-l border-slate-300 dark:border-slate-600 pl-1">
+                                    <button type="button" onclick="downloadPlot('plotBBY', 'Aperture_Height')" aria-label="Download Aperture Height PNG" class="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1" title="Download PNG"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="plotBBY" class="w-full flex-1 min-h-[300px]"></div>
+                    </div>
+                </div>
+
+                <!-- Notable Dimensions Section -->
+                <div class="glass-panel rounded-lg p-4 shadow-sm hidden chart-controls transition-colors w-full" id="cardDimensions">
+                    <div class="flex flex-col justify-between border-b border-slate-100 dark:border-slate-700 pb-4 mb-4 gap-4 w-full">
+                        <div class="w-full break-words min-w-0">
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <i class="fa-solid fa-ruler-combined text-slate-400 dark:text-slate-500" aria-hidden="true"></i> Track Notable Dimensions
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Select a target mode and metric to calculate specific offsets or angles across the array.</p>
+                        </div>
+
+                        <div class="flex items-end gap-3 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-md border border-slate-200 dark:border-slate-700 flex-wrap w-full">
+                            <div>
+                                <label for="selDimMode" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Target Mode</label>
+                                <select id="selDimMode" class="w-64 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded custom-scrollbar dark:bg-slate-700 dark:text-white">
+                                    <option value="internal">Intra-Aperture (Pt to Pt)</option>
+                                    <optgroup label="Lattice Direction Neighbors">
+                                        <option value="neighbor_1">1st Closest Along Lattice</option>
+                                        <option value="neighbor_2">2nd Closest Along Lattice</option>
+                                        <option value="neighbor_3">3rd Closest Along Lattice</option>
+                                    </optgroup>
+                                    <optgroup label="X Direction Neighbors">
+                                        <option value="neighbor_x_1">1st Closest Along X</option>
+                                        <option value="neighbor_x_2">2nd Closest Along X</option>
+                                        <option value="neighbor_x_3">3rd Closest Along X</option>
+                                    </optgroup>
+                                    <optgroup label="Y Direction Neighbors">
+                                        <option value="neighbor_y_1">1st Closest Along Y</option>
+                                        <option value="neighbor_y_2">2nd Closest Along Y</option>
+                                        <option value="neighbor_y_3">3rd Closest Along Y</option>
+                                    </optgroup>
+                                    <optgroup label="Position &amp; Coordinates">
+                                        <option value="absolute_pos">Absolute Position (X,Y,Z)</option>
+                                        <option value="raw_points">All Points (X,Y,Z)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div id="dimPointA_container">
+                                <label for="selPointA" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Point A</label>
+                                <select id="selPointA" class="w-24 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white"></select>
+                            </div>
+                            <div id="dimPointB_container">
+                                <label for="selPointB" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Point B</label>
+                                <select id="selPointB" class="w-24 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white"></select>
+                            </div>
+                            <div>
+                                <label for="selMetricType" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Metric</label>
+                                <select id="selMetricType" class="w-36 text-sm p-1.5 border border-slate-300 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white">
+                                    <option value="dx">X Distance (ΔX)</option>
+                                    <option value="dy">Y Distance (ΔY)</option>
+                                    <option value="angle">Lattice Angle (°)</option>
+                                    <option value="euclidean">Absolute Distance</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnAddDimension" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-1.5 rounded font-medium transition-colors">
+                                Add Chart
+                            </button>
+                            <div class="flex items-center gap-1 pl-2 border-l border-slate-300 dark:border-slate-600">
+                                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase leading-tight mr-1">1st–3rd<br>Presets:</span>
+                                <button type="button" onclick="addNeighborPreset('dx')" class="bg-violet-600 hover:bg-violet-700 text-white text-xs px-2.5 py-1.5 rounded font-medium transition-colors" title="Add 1st, 2nd, and 3rd neighbor X-distance (ΔX) charts">
+                                    ΔX
+                                </button>
+                                <button type="button" onclick="addNeighborPreset('dy')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1.5 rounded font-medium transition-colors" title="Add 1st, 2nd, and 3rd neighbor Y-distance (ΔY) charts">
+                                    ΔY
+                                </button>
+                                <button type="button" onclick="addNeighborPreset('angle')" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-2.5 py-1.5 rounded font-medium transition-colors" title="Add 1st, 2nd, and 3rd neighbor Lattice Angle (°) charts">
+                                    Angle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="dynamicChartsContainer" class="space-y-6">
+                        <div class="text-center text-slate-400 dark:text-slate-500 py-8 text-sm italic" id="emptyDimensionMsg">
+                            No custom dimensions tracking yet. Use the controls above to add one.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js" defer></script>
+</body>
+</html>

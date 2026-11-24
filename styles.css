@@ -1,0 +1,60 @@
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.96);
+            border-color: #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Minimum sizing for resizable 3D overview panel */
+        #cardOverview { min-height: 260px; min-width: 300px; max-width: 92vw; max-height: 90vh; }
+
+        /* Compact numerical inputs for chart controls */
+        .chart-controls input[type="number"] {
+            width: 4.1rem;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.35rem;
+            border-radius: 0.25rem;
+            border-width: 1px;
+        }
+/* Standard scrollbar styling for Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f1f1;
+}
+.dark .custom-scrollbar {
+    scrollbar-color: #475569 #1e293b;
+}
+
+/* Seamless inline-editable chart titles */
+.chart-title-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    font: inherit;
+    color: inherit;
+    min-width: 8rem;
+    max-width: 100%;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.chart-title-input:hover {
+    border-color: rgba(148, 163, 184, 0.5);
+    background-color: rgba(148, 163, 184, 0.08);
+}
+.chart-title-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.08);
+}
