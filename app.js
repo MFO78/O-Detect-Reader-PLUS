@@ -2929,17 +2929,20 @@
             const resolvedTitle = getChartTitle(plotId, chartTitle || plotId);
 
             let titleHtml = `<b>${esc(resolvedTitle)}</b>`;
+            let titleLinesHeight = Math.round(titleFontSize * 1.45);
             if (metric) {
                 const nomText = !isNaN(metric.nom) ? `${metric.nom.toFixed(3)}${metric.unit}` : '--';
                 const line1 = `Avg: ${metric.avg.toFixed(3)}${metric.unit}   |   Nom: ${nomText}`;
                 const line2 = formatMetricFailsSummary(metric);
                 titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
                 titleHtml += `<br><span style="font-size:${sub2FontSize}px;color:${subColor}">${esc(line2)}</span>`;
+                titleLinesHeight += Math.round((sub1FontSize + sub2FontSize) * 1.45);
             } else if (plotId === 'plotOverview') {
                 const partNo = UI.inpPartNum.value.trim() || 'N/A';
                 const serialNo = UI.inpSerialNum.value.trim() || 'N/A';
                 const line1 = `Part: ${partNo}   |   Serial: ${serialNo}   |   Points: ${State.rawPoints.length}   |   Apertures: ${State.apertures.length}`;
                 titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
+                titleLinesHeight += Math.round(sub1FontSize * 1.45);
             }
 
             exportLayout.title = {
@@ -2947,11 +2950,12 @@
                 font: { size: titleFontSize, color: theme.fontColor },
                 x: 0.5,
                 xanchor: 'center',
-                y: 0.97,
-                yanchor: 'top'
+                y: 0.98,
+                yanchor: 'top',
+                pad: { t: Math.round(baseFont * 0.4), b: Math.round(baseFont * 0.6) }
             };
 
-            const scaleAxisFonts = (ax, titleSize = axisTitleSize, tickSize = axisTickSize) => {
+            const scaleAxisFonts = (ax, titleSize = axisTitleSize, tickSize = axisTickSize, enableAutoMargin = true) => {
                 if (!ax) return;
                 if (typeof ax.title === 'string') {
                     ax.title = { text: ax.title };
@@ -2959,17 +2963,18 @@
                     ax.title = ax.title || {};
                 }
                 ax.title.font = { ...(ax.title.font || {}), size: titleSize, color: theme.fontColor };
-                ax.title.standoff = Math.max(14, Math.round(baseFont * 0.9));
+                ax.title.standoff = Math.max(16, Math.round(baseFont * 0.85));
                 ax.tickfont = { ...(ax.tickfont || {}), size: tickSize, color: theme.fontColor };
+                if (enableAutoMargin) ax.automargin = true;
             };
 
             exportLayout.font = { ...(exportLayout.font || {}), size: baseFont, color: theme.fontColor };
-            scaleAxisFonts(exportLayout.xaxis, axisTitleSize, axisTickSize);
-            scaleAxisFonts(exportLayout.yaxis, axisTitleSize, axisTickSize);
+            scaleAxisFonts(exportLayout.xaxis, axisTitleSize, axisTickSize, true);
+            scaleAxisFonts(exportLayout.yaxis, axisTitleSize, axisTickSize, true);
             if (exportLayout.scene) {
-                scaleAxisFonts(exportLayout.scene.xaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8));
-                scaleAxisFonts(exportLayout.scene.yaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8));
-                scaleAxisFonts(exportLayout.scene.zaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8));
+                scaleAxisFonts(exportLayout.scene.xaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
+                scaleAxisFonts(exportLayout.scene.yaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
+                scaleAxisFonts(exportLayout.scene.zaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
             }
             if (exportLayout.legend) {
                 exportLayout.legend.font = { ...(exportLayout.legend.font || {}), size: legendFontSize, color: theme.fontColor };
@@ -2986,15 +2991,19 @@
                 }
             });
 
-            const topMargin = Math.max(100, Math.round(titleFontSize + sub1FontSize + sub2FontSize + 52));
-            const leftMargin = Math.max(95, Math.round(axisTitleSize + axisTickSize * 2.5 + 25));
-            const bottomMargin = Math.max(85, Math.round(axisTitleSize + axisTickSize * 2 + 25));
+            // Generous dynamic padding so large titles and axis labels never clip
+            const topMargin = Math.max(120, titleLinesHeight + Math.round(baseFont * 1.6) + 32);
+            const leftMargin = Math.max(110, Math.round(axisTitleSize + axisTickSize * 3.2 + 40));
+            const rightMargin = Math.max(55, Math.round(baseFont * 1.5 + 25));
+            const bottomMargin = Math.max(95, Math.round(axisTitleSize + axisTickSize * 2.2 + 40));
+            const marginPad = Math.max(8, Math.round(baseFont * 0.35));
+
             if (plotId === 'plotOverview') {
                 exportLayout.margin = exportLayout.scene
-                    ? { l: 20, r: 20, b: 20, t: Math.max(100, Math.round(titleFontSize + sub1FontSize + 45)) }
-                    : { l: leftMargin, r: 45, b: bottomMargin, t: Math.max(100, Math.round(titleFontSize + sub1FontSize + 45)) };
+                    ? { l: 30, r: 30, b: 30, t: topMargin, pad: marginPad }
+                    : { l: leftMargin, r: rightMargin, b: bottomMargin, t: topMargin, pad: marginPad };
             } else {
-                exportLayout.margin = { l: leftMargin, r: 45, b: bottomMargin, t: topMargin };
+                exportLayout.margin = { l: leftMargin, r: rightMargin, b: bottomMargin, t: topMargin, pad: marginPad };
             }
 
             return { data: exportData, layout: exportLayout };
@@ -3192,12 +3201,13 @@
                     });
                 }
                 const exportLayout = JSON.parse(JSON.stringify(plotEl.layout || {}));
-                const scaleFont = (ax) => {
+                const scaleFont = (ax, enableAutoMargin = true) => {
                     if (!ax) return;
                     ax.title = ax.title || {};
                     ax.title.font = { size: Math.round(basePdfFont * 1.25), color: '#334155' };
-                    ax.title.standoff = Math.max(18, Math.round(basePdfFont * 1.1));
+                    ax.title.standoff = Math.max(18, Math.round(basePdfFont * 1.0));
                     ax.tickfont = { size: basePdfFont, color: '#475569' };
+                    if (enableAutoMargin) ax.automargin = true;
                 };
 
                 scaleFont(exportLayout.xaxis);
@@ -3208,7 +3218,7 @@
                     scaleFont(exportLayout.scene.zaxis);
                 }
 
-                exportLayout.margin = { l: 160, r: 50, b: 160, t: 20 };
+                exportLayout.margin = { l: Math.max(120, Math.round(basePdfFont * 4.5 + 40)), r: Math.max(55, Math.round(basePdfFont * 1.5 + 25)), b: Math.max(105, Math.round(basePdfFont * 3.5 + 40)), t: Math.max(30, Math.round(basePdfFont * 1.2)), pad: Math.max(8, Math.round(basePdfFont * 0.35)) };
                 exportLayout.paper_bgcolor = '#ffffff';
                 exportLayout.plot_bgcolor = '#f8fafc';
                 exportLayout.font = { ...exportLayout.font, color: '#334155' };
