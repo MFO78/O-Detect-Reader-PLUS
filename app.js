@@ -596,6 +596,21 @@
                             const padY = Math.max(dy * 0.1, 0.05 * Math.max(dx, dy, 1));
                             const padZ = Math.max(dz * 0.1, 0.05 * Math.max(dx, dy, dz, 1));
 
+                            const fitEqualAxesRanges = (x0, x1, y0, y1) => {
+                                if (!State.isEqualAxes) return [[x0, x1], [y0, y1]];
+                                const sz = overviewEl._fullLayout && overviewEl._fullLayout._size;
+                                const aspect = (sz && sz.w > 0 && sz.h > 0) ? (sz.w / sz.h) : 1;
+                                const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+                                let spanX = Math.max(x1 - x0, 1e-4);
+                                let spanY = Math.max(y1 - y0, 1e-4);
+                                if (spanX / spanY < aspect) {
+                                    spanX = spanY * aspect;
+                                } else {
+                                    spanY = spanX / aspect;
+                                }
+                                return [[mx - spanX / 2, mx + spanX / 2], [my - spanY / 2, my + spanY / 2]];
+                            };
+
                             if (State.overviewView === 'iso') {
                                 update3D['scene.xaxis.autorange'] = false;
                                 update3D['scene.yaxis.autorange'] = false;
@@ -604,20 +619,23 @@
                                 update3D['scene.yaxis.range'] = [cMinY - padY, cMaxY + padY];
                                 update3D['scene.zaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             } else if (State.overviewView === 'xy') {
+                                const [xr, yr] = fitEqualAxesRanges(cMinX - padX, cMaxX + padX, cMinY - padY, cMaxY + padY);
                                 update3D['xaxis.autorange'] = false;
                                 update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
-                                update3D['yaxis.range'] = [cMinY - padY, cMaxY + padY];
+                                update3D['xaxis.range'] = xr;
+                                update3D['yaxis.range'] = yr;
                             } else if (State.overviewView === 'xz') {
+                                const [xr, yr] = fitEqualAxesRanges(cMinX - padX, cMaxX + padX, cMinZ - padZ, cMaxZ + padZ);
                                 update3D['xaxis.autorange'] = false;
                                 update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
-                                update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
+                                update3D['xaxis.range'] = xr;
+                                update3D['yaxis.range'] = yr;
                             } else if (State.overviewView === 'yz') {
+                                const [xr, yr] = fitEqualAxesRanges(cMinY - padY, cMaxY + padY, cMinZ - padZ, cMaxZ + padZ);
                                 update3D['xaxis.autorange'] = false;
                                 update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = [cMinY - padY, cMaxY + padY];
-                                update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
+                                update3D['xaxis.range'] = xr;
+                                update3D['yaxis.range'] = yr;
                             }
                         }
                     }
@@ -3600,7 +3618,10 @@
          * ========================================================================= */
         UI.fileInput.addEventListener('change', handleFileUpload);
         UI.btnLoadSample.addEventListener('click', generateSampleData);
-        UI.btnProcess.addEventListener('click', applyModificationsAndProcess);
+        UI.btnProcess.addEventListener('click', () => {
+            State.autoSigmaOnNextProcess = true;
+            applyModificationsAndProcess();
+        });
         UI.btnToggleSidebar.addEventListener('click', toggleSidebar);
         UI.selLayoutMode.addEventListener('change', updateLayoutMode);
         UI.selDimMode.addEventListener('change', toggleDimMode);
