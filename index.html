@@ -291,7 +291,7 @@
             <div class="glass-panel rounded-lg p-4 shadow-sm w-full hidden flex-col transition-colors" id="cardOverview">
                 <div class="flex flex-col xl:flex-row xl:justify-between xl:items-center border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 shrink-0">
                     <h3 class="text-lg font-semibold flex items-center shrink-0 dark:text-slate-100">
-                        <i class="fa-solid fa-cube text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotOverview" value="3D Array Overview" aria-label="Edit 3D Array Overview chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotOverview', this.value)">
+                        <i class="fa-solid fa-cube text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotOverview" value="3D Array Overview" aria-label="Edit 3D Array Overview chart title" title="Click to edit chart title" class="chart-title-input w-44" oninput="onChartTitleChange('plotOverview', this.value)">
                     </h3>
 
                     <div class="flex flex-wrap items-center gap-2 text-xs bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded border border-slate-200 dark:border-slate-700 w-full xl:w-auto">
@@ -365,7 +365,7 @@
                         <button type="button" aria-label="Hide X-Lattice Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotStepX', 'wrapper_stepX', 'stepX')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                         <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
                             <div class="w-full break-words min-w-0 pr-6">
-                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-left-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepX" value="X-Lattice" aria-label="Edit X-Lattice chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotStepX', this.value)"></h3>
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-left-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepX" value="X-Lattice" aria-label="Edit X-Lattice chart title" title="Click to edit chart title" class="chart-title-input w-48" oninput="onChartTitleChange('plotStepX', this.value)"></h3>
                                 <p class="text-[10px] text-slate-500 dark:text-slate-400">Absolute X distance to the primary neighbor.</p>
                                 <div id="stats_stepX" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
                             </div>
@@ -403,7 +403,7 @@
                         <button type="button" aria-label="Hide Y-Lattice Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotStepY', 'wrapper_stepY', 'stepY')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                         <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
                             <div class="w-full break-words min-w-0 pr-6">
-                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-up-down text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepY" value="Y-Lattice" aria-label="Edit Y-Lattice chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotStepY', this.value)"></h3>
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-arrows-up-down text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotStepY" value="Y-Lattice" aria-label="Edit Y-Lattice chart title" title="Click to edit chart title" class="chart-title-input w-48" oninput="onChartTitleChange('plotStepY', this.value)"></h3>
                                 <p class="text-[10px] text-slate-500 dark:text-slate-400">Absolute Y distance to the primary neighbor.</p>
                                 <div id="stats_stepY" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
                             </div>
@@ -441,7 +441,7 @@
                         <button type="button" aria-label="Hide Lattice Angle Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotAngle', 'wrapper_angle', 'angle')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                         <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
                             <div class="w-full break-words min-w-0 pr-6">
-                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-angle-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotAngle" value="Lattice Angle" aria-label="Edit Lattice Angle chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotAngle', this.value)"></h3>
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-angle-right text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotAngle" value="Lattice Angle" aria-label="Edit Lattice Angle chart title" title="Click to edit chart title" class="chart-title-input w-48" oninput="onChartTitleChange('plotAngle', this.value)"></h3>
                                 <p class="text-[10px] text-slate-500 dark:text-slate-400">Vector angle of the primary step.</p>
                                 <div id="stats_angle" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
                             </div>
@@ -483,7 +483,7 @@
                         <button type="button" aria-label="Hide Aperture Width Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotBBX', 'wrapper_bbX', 'bbX')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                         <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
                             <div class="w-full break-words min-w-0 pr-6">
-                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBX" value="Aperture Width" aria-label="Edit Aperture Width chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotBBX', this.value)"></h3>
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBX" value="Aperture Width" aria-label="Edit Aperture Width chart title" title="Click to edit chart title" class="chart-title-input w-48" oninput="onChartTitleChange('plotBBX', this.value)"></h3>
                                 <p class="text-xs text-slate-500 dark:text-slate-400">Maximum span in the X-axis for each aperture.</p>
                                 <div id="stats_bbX" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
                             </div>
@@ -521,7 +521,7 @@
                         <button type="button" aria-label="Hide Aperture Height Chart" class="absolute top-2 right-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors px-2 py-1 z-10" onclick="hideDefaultChart('plotBBY', 'wrapper_bbY', 'bbY')" title="Hide Chart"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                         <div class="flex flex-col items-start border-b border-slate-100 dark:border-slate-700 pb-2 mb-2 gap-3 w-full">
                             <div class="w-full break-words min-w-0 pr-6">
-                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBY" value="Aperture Height" aria-label="Edit Aperture Height chart title" title="Click to edit chart title" class="chart-title-input" oninput="onChartTitleChange('plotBBY', this.value)"></h3>
+                                <h3 class="text-lg font-semibold dark:text-slate-100"><i class="fa-solid fa-compress text-slate-400 dark:text-slate-500 mr-2" aria-hidden="true"></i> <input type="text" id="title_plotBBY" value="Aperture Height" aria-label="Edit Aperture Height chart title" title="Click to edit chart title" class="chart-title-input w-48" oninput="onChartTitleChange('plotBBY', this.value)"></h3>
                                 <p class="text-xs text-slate-500 dark:text-slate-400">Maximum span in the Y-axis for each aperture.</p>
                                 <div id="stats_bbY" class="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5 bg-slate-100/80 dark:bg-slate-800/80 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition-colors">Avg: --</div>
                             </div>
