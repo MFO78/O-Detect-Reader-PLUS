@@ -494,20 +494,34 @@
                 }
 
                 // 1. Sync all other 2D charts with domain-appropriate X range
-                State.active2DCharts.forEach(id => {
-                    if (id === plotId || State.hiddenCharts.has(id)) return;
-                    const otherEl = document.getElementById(id);
-                    if (!otherEl) return;
-
-                    if (isAuto) {
-                        promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
-                    } else {
+                if (isAuto) {
+                    State.active2DCharts.forEach(id => {
+                        const otherEl = document.getElementById(id);
+                        if (!otherEl || State.hiddenCharts.has(id)) return;
+                        if (otherEl._fullOverviewTraces) {
+                            const fullX = otherEl._fullOverviewTraces.map(t => t.x);
+                            const fullY = otherEl._fullOverviewTraces.map(t => t.y);
+                            otherEl._fullOverviewTraces = null;
+                            promises.push(
+                                Plotly.restyle(id, { x: fullX, y: fullY })
+                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
+                                    .catch(() => {})
+                            );
+                        } else if (id !== plotId) {
+                            promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
+                        }
+                    });
+                } else {
+                    State.active2DCharts.forEach(id => {
+                        if (id === plotId || State.hiddenCharts.has(id)) return;
+                        const otherEl = document.getElementById(id);
+                        if (!otherEl) return;
                         const targetRange = isRawPointsChart(id) ? rawRange : apRange;
                         if (targetRange) {
                             promises.push(Plotly.relayout(id, { 'xaxis.range': targetRange }).catch(() => {}));
                         }
-                    }
-                });
+                    });
+                }
 
                 // 2. Sync 3D/2D overview explicitly to physical extents of visible points
                 const overviewEl = document.getElementById('plotOverview');
@@ -528,10 +542,11 @@
                         let cMinZ = Infinity, cMaxZ = -Infinity;
                         let foundAny = false;
 
-                        const maxIdx = sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1;
+                        const traceX = (el.data && el.data[0] && Array.isArray(el.data[0].x)) ? el.data[0].x : null;
+                        const maxIdx = traceX ? (traceX.length - 1) : (sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1);
                         let sIdx = Math.max(0, Math.ceil(Math.min(r0, r1)));
                         let eIdx = Math.min(maxIdx, Math.floor(Math.max(r0, r1)));
-                        if (sIdx > eIdx) {
+                        if (sIdx > eIdx && maxIdx >= 0) {
                             const mid = Math.max(0, Math.min(maxIdx, Math.round((r0 + r1) / 2)));
                             sIdx = mid;
                             eIdx = mid;
@@ -540,7 +555,8 @@
                         if (sIdx <= eIdx && sIdx >= 0) {
                             if (sourceIsRaw) {
                                 for (let i = sIdx; i <= eIdx; i++) {
-                                    const pt = State.rawPoints[i];
+                                    const rawIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
+                                    const pt = State.rawPoints[isNaN(rawIdx) ? i : rawIdx];
                                     if (!pt) continue;
                                     if (pt.x < cMinX) cMinX = pt.x;
                                     if (pt.x > cMaxX) cMaxX = pt.x;
@@ -552,7 +568,8 @@
                                 }
                             } else {
                                 for (let i = sIdx; i <= eIdx; i++) {
-                                    const ap = State.apertures[i];
+                                    const apIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
+                                    const ap = State.apertures[isNaN(apIdx) ? i : apIdx];
                                     if (!ap) continue;
                                     for (const pt of ap) {
                                         if (pt.x < cMinX) cMinX = pt.x;
@@ -743,7 +760,6 @@
                                 newX.push(fx);
                                 newY.push(fy);
                             } else if (t.x.length === 2 && filteredPrimaryX.length > 0) {
-                                // Keep horizontal Avg reference line spanning the filtered categories
                                 newX.push([filteredPrimaryX[0], filteredPrimaryX[filteredPrimaryX.length - 1]]);
                                 newY.push(t.y.slice());
                             } else {
@@ -2792,10 +2808,17 @@
                         UI.emptyDimensionMsg.classList.remove('hidden');
                     }
 
-                    // Automatically invoke the blue σ recalculation when data is present
+                    // Always schedule automatic blue σ recalculation on config load
+                    State.autoSigmaOnNextProcess = true;
                     if (State.originalRawPoints && State.originalRawPoints.length > 0) {
-                        State.autoSigmaOnNextProcess = true;
                         applyModificationsAndProcess();
+                        autoRunConfiguredSigmaTolerances();
+                        renderStepPlots({ skipOverview: true });
+                        renderBBPlots({ skipOverview: true });
+                        for (let i = 1; i <= State.dimensionCharts; i++) {
+                            if (State.customDims[`dimChart_${i}`]) renderCustomDimChart(i, { skipOverview: true });
+                        }
+                        update3DOverview();
                     } else {
                         updateAllChartsTheme();
                     }
