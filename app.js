@@ -528,9 +528,14 @@
                         let cMinZ = Infinity, cMaxZ = -Infinity;
                         let foundAny = false;
 
-                        const sIdx = Math.max(0, Math.floor(r0));
                         const maxIdx = sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1;
-                        const eIdx = Math.min(maxIdx, Math.ceil(r1));
+                        let sIdx = Math.max(0, Math.ceil(Math.min(r0, r1)));
+                        let eIdx = Math.min(maxIdx, Math.floor(Math.max(r0, r1)));
+                        if (sIdx > eIdx) {
+                            const mid = Math.max(0, Math.min(maxIdx, Math.round((r0 + r1) / 2)));
+                            sIdx = mid;
+                            eIdx = mid;
+                        }
 
                         if (sIdx <= eIdx && sIdx >= 0) {
                             if (sourceIsRaw) {
@@ -575,16 +580,25 @@
                             const padZ = Math.max(dz * 0.1, 0.05 * Math.max(dx, dy, dz, 1));
 
                             if (State.overviewView === 'iso') {
+                                update3D['scene.xaxis.autorange'] = false;
+                                update3D['scene.yaxis.autorange'] = false;
+                                update3D['scene.zaxis.autorange'] = false;
                                 update3D['scene.xaxis.range'] = [cMinX - padX, cMaxX + padX];
                                 update3D['scene.yaxis.range'] = [cMinY - padY, cMaxY + padY];
                                 update3D['scene.zaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             } else if (State.overviewView === 'xy') {
+                                update3D['xaxis.autorange'] = false;
+                                update3D['yaxis.autorange'] = false;
                                 update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
                                 update3D['yaxis.range'] = [cMinY - padY, cMaxY + padY];
                             } else if (State.overviewView === 'xz') {
+                                update3D['xaxis.autorange'] = false;
+                                update3D['yaxis.autorange'] = false;
                                 update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
                                 update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             } else if (State.overviewView === 'yz') {
+                                update3D['xaxis.autorange'] = false;
+                                update3D['yaxis.autorange'] = false;
                                 update3D['xaxis.range'] = [cMinY - padY, cMaxY + padY];
                                 update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             }
@@ -2945,7 +2959,6 @@
                 titleBlockHeight += Math.round(sub1FontSize * 1.45);
             }
 
-            // Generous top padding inside the 2400x800 (3:1) canvas so title ascenders never clip
             const titlePadTop = Math.round(titleFontSize * 0.8 + 28);
             exportLayout.title = {
                 text: titleHtml,
@@ -2983,7 +2996,6 @@
                 exportLayout.legend.font = { ...(exportLayout.legend.font || {}), size: legendFontSize, color: theme.fontColor };
             }
 
-            // Respect user-selected 2D Pts marker size on exported images
             const user2DSize = get2DMarkerSize();
             exportData.forEach(trace => {
                 if (plotId === 'plotOverview') {
