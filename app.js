@@ -251,13 +251,11 @@
             const el = document.getElementById('inp2DMarkerSize');
             return el ? (parseInt(el.value, 10) || 4) : 4;
         }
-
         function getExportFontSize() {
             const el = document.getElementById('inpExportFontSize');
             const val = el ? parseFloat(el.value) : 20;
             return (!isNaN(val) && val >= 10 && val <= 48) ? val : 20;
         }
-
         function getChartTitle(plotId, fallback = '') {
             const inputEl = document.getElementById(`title_${plotId}`);
             if (inputEl && inputEl.value.trim()) return inputEl.value.trim();
@@ -265,14 +263,12 @@
             if (State.customDims[plotId] && State.customDims[plotId].title) return State.customDims[plotId].title;
             return fallback || plotId;
         }
-
         function onChartTitleChange(plotId, value) {
             const trimmed = String(value || '').trim();
             State.chartTitles[plotId] = trimmed;
             if (State.customDims[plotId]) State.customDims[plotId].title = trimmed || State.customDims[plotId].defaultTitle || plotId;
         }
         window.onChartTitleChange = onChartTitleChange;
-
         function getAllChartTitles() {
             const titles = {};
             ['plotOverview', 'plotStepX', 'plotStepY', 'plotAngle', 'plotBBX', 'plotBBY'].forEach(id => {
@@ -520,6 +516,9 @@
                 if (overviewEl && State.apertures.length > 0) {
                     const update3D = {};
                     if (isAuto) {
+                        if (overviewEl.data && overviewEl.data.length >= 2) {
+                            promises.push(Plotly.restyle('plotOverview', { 'marker.opacity': [0.85, 1.0] }, [0, 1]).catch(() => {}));
+                        }
                         if (State.overviewView === 'iso') {
                             update3D['scene.xaxis.autorange'] = true;
                             update3D['scene.yaxis.autorange'] = true;
@@ -534,6 +533,7 @@
                         let cMinZ = Infinity, cMaxZ = -Infinity;
                         let foundAny = false;
 
+                        const selectedApSet = new Set();
                         const traceX = (el.data && el.data[0] && Array.isArray(el.data[0].x)) ? el.data[0].x : null;
                         const maxIdx = traceX ? (traceX.length - 1) : (sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1);
                         let sIdx = Math.max(0, Math.ceil(Math.min(r0, r1)));
@@ -546,8 +546,10 @@
                             if (sourceIsRaw) {
                                 for (let i = sIdx; i <= eIdx; i++) {
                                     const rawIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
-                                    const pt = State.rawPoints[isNaN(rawIdx) ? i : rawIdx];
+                                    const idxUse = isNaN(rawIdx) ? i : rawIdx;
+                                    const pt = State.rawPoints[idxUse];
                                     if (!pt) continue;
+                                    if (State.pointToApertureMap[idxUse] !== undefined) selectedApSet.add(State.pointToApertureMap[idxUse]);
                                     if (pt.x < cMinX) cMinX = pt.x; if (pt.x > cMaxX) cMaxX = pt.x;
                                     if (pt.y < cMinY) cMinY = pt.y; if (pt.y > cMaxY) cMaxY = pt.y;
                                     if (pt.z < cMinZ) cMinZ = pt.z; if (pt.z > cMaxZ) cMaxZ = pt.z;
@@ -556,8 +558,10 @@
                             } else {
                                 for (let i = sIdx; i <= eIdx; i++) {
                                     const apIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
-                                    const ap = State.apertures[isNaN(apIdx) ? i : apIdx];
+                                    const idxUse = isNaN(apIdx) ? i : apIdx;
+                                    const ap = State.apertures[idxUse];
                                     if (!ap) continue;
+                                    selectedApSet.add(idxUse);
                                     for (const pt of ap) {
                                         if (pt.x < cMinX) cMinX = pt.x; if (pt.x > cMaxX) cMaxX = pt.x;
                                         if (pt.y < cMinY) cMinY = pt.y; if (pt.y > cMaxY) cMaxY = pt.y;
@@ -566,6 +570,11 @@
                                     }
                                 }
                             }
+                        }
+                        if (selectedApSet.size > 0 && overviewEl.data && overviewEl.data.length >= 2) {
+                            const ptOpacities = State.pointToApertureMap.map(apIdx => selectedApSet.has(apIdx) ? 0.95 : 0.12);
+                            const ctrOpacities = State.centroids.map((_, apIdx) => selectedApSet.has(apIdx) ? 1.0 : 0.12);
+                            promises.push(Plotly.restyle('plotOverview', { 'marker.opacity': [ptOpacities, ctrOpacities] }, [0, 1]).catch(() => {}));
                         }
 
                         if (foundAny) {
@@ -680,6 +689,9 @@
 
                 State.isSyncingZoom = true;
                 const promises = [];
+                if (overviewEl.data && overviewEl.data.length >= 2) {
+                    promises.push(Plotly.restyle('plotOverview', { 'marker.opacity': [0.85, 1.0] }, [0, 1]).catch(() => {}));
+                }
                 if (isAuto) {
                     State.active2DCharts.forEach(id => {
                         const otherEl = document.getElementById(id);
@@ -3589,10 +3601,7 @@
             updateAllChartsTheme();
             loadLastDirHandle();
         });
-/* =========================================================================
-         * PWA Install Prompt & Service Worker Registration
-         * ========================================================================= */
-        (function initPWA() {
+(function initPWA() {
             const btnInstall = document.getElementById('btnInstallApp');
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
