@@ -3514,35 +3514,35 @@
          * PWA Install Prompt & Service Worker Registration
          * ========================================================================= */
         (function initPWA() {
-            let deferredInstallPrompt = null;
             const btnInstall = document.getElementById('btnInstallApp');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
             if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js').catch(() => {});
-                });
+                navigator.serviceWorker.register('./sw.js').catch(() => {});
             }
 
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredInstallPrompt = e;
-                if (btnInstall) btnInstall.classList.remove('hidden');
-            });
+            if (btnInstall && isStandalone) {
+                btnInstall.classList.add('hidden');
+            }
 
             if (btnInstall) {
                 btnInstall.addEventListener('click', async () => {
-                    if (!deferredInstallPrompt) return;
-                    deferredInstallPrompt.prompt();
-                    try {
-                        await deferredInstallPrompt.userChoice;
-                    } catch (_) {}
-                    deferredInstallPrompt = null;
-                    btnInstall.classList.add('hidden');
+                    const promptEvt = window.__deferredInstallPrompt;
+                    if (promptEvt) {
+                        promptEvt.prompt();
+                        try {
+                            await promptEvt.userChoice;
+                        } catch (_) {}
+                        window.__deferredInstallPrompt = null;
+                        btnInstall.classList.add('hidden');
+                    } else if (typeof showNotification === 'function') {
+                        showNotification('To install: click the install icon in Chrome\'s address bar (or Menu -> Save and Share -> Install page as app).', 'info');
+                    }
                 });
             }
 
             window.addEventListener('appinstalled', () => {
-                deferredInstallPrompt = null;
+                window.__deferredInstallPrompt = null;
                 if (btnInstall) btnInstall.classList.add('hidden');
                 if (typeof showNotification === 'function') {
                     showNotification('App installed successfully.', 'success');
