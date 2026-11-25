@@ -673,14 +673,27 @@
                 if (!hasBounds && !isAuto) return;
 
                 State.isSyncingZoom = true;
-                let apUpdate = null;
-                let rawUpdate = null;
+                const promises = [];
 
                 if (isAuto) {
-                    apUpdate = { 'xaxis.autorange': true };
-                    rawUpdate = { 'xaxis.autorange': true };
+                    State.active2DCharts.forEach(id => {
+                        const otherEl = document.getElementById(id);
+                        if (!otherEl || State.hiddenCharts.has(id)) return;
+                        if (otherEl._fullOverviewTraces) {
+                            const fullX = otherEl._fullOverviewTraces.map(t => t.x);
+                            const fullY = otherEl._fullOverviewTraces.map(t => t.y);
+                            otherEl._fullOverviewTraces = null;
+                            promises.push(
+                                Plotly.restyle(id, { x: fullX, y: fullY })
+                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
+                                    .catch(() => {})
+                            );
+                        } else {
+                            promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
+                        }
+                    });
                 } else {
-                    let minIdx = Infinity, maxIdx = -Infinity;
+                    const visibleApSet = new Set();
                     State.centroids.forEach((c, idx) => {
                         const inX = c.x >= xMin && c.x <= xMax;
                         const inY = c.y >= yMin && c.y <= yMax;
@@ -690,37 +703,64 @@
                         else if (State.overviewView === 'xz') isVisible = inX && inZ;
                         else if (State.overviewView === 'yz') isVisible = inY && inZ;
                         else isVisible = inX && inY && inZ;
-
-                        if (isVisible) {
-                            if (idx < minIdx) minIdx = idx;
-                            if (idx > maxIdx) maxIdx = idx;
-                        }
+                        if (isVisible) visibleApSet.add(idx);
                     });
 
-                    if (minIdx === Infinity) {
+                    if (visibleApSet.size === 0) {
                         State.isSyncingZoom = false;
                         return;
                     }
 
-                    apUpdate = { 'xaxis.range': [minIdx - 0.5, maxIdx + 0.5] };
-                    if (State.aperturePointRanges[minIdx] && State.aperturePointRanges[maxIdx]) {
-                        rawUpdate = {
-                            'xaxis.range': [
-                                State.aperturePointRanges[minIdx].start - 0.5,
-                                State.aperturePointRanges[maxIdx].end + 0.5
-                            ]
-                        };
-                    }
-                }
+                    State.active2DCharts.forEach(id => {
+                        const otherEl = document.getElementById(id);
+                        if (!otherEl || !otherEl.data || State.hiddenCharts.has(id)) return;
 
-                const promises = [];
-                State.active2DCharts.forEach(id => {
-                    const otherEl = document.getElementById(id);
-                    if (otherEl && !State.hiddenCharts.has(id)) {
-                        const upd = isRawPointsChart(id) ? rawUpdate : apUpdate;
-                        if (upd) promises.push(Plotly.relayout(id, upd).catch(() => {}));
-                    }
-                });
+                        if (!otherEl._fullOverviewTraces) {
+                            otherEl._fullOverviewTraces = otherEl.data.map(t => ({
+                                x: Array.isArray(t.x) ? t.x.slice() : [],
+                                y: Array.isArray(t.y) ? t.y.slice() : []
+                            }));
+                        }
+
+                        const rawMode = isRawPointsChart(id);
+                        const baseTraces = otherEl._fullOverviewTraces;
+                        const newX = [];
+                        const newY = [];
+                        let filteredPrimaryX = [];
+
+                        baseTraces.forEach((t, tIdx) => {
+                            if (tIdx === 0) {
+                                const fx = [];
+                                const fy = [];
+                                for (let i = 0; i < t.x.length; i++) {
+                                    const apIdx = rawMode ? State.pointToApertureMap[i] : i;
+                                    if (visibleApSet.has(apIdx)) {
+                                        fx.push(t.x[i]);
+                                        fy.push(t.y[i]);
+                                    }
+                                }
+                                filteredPrimaryX = fx;
+                                newX.push(fx);
+                                newY.push(fy);
+                            } else if (t.x.length === 2 && filteredPrimaryX.length > 0) {
+                                // Keep horizontal Avg reference line spanning the filtered categories
+                                newX.push([filteredPrimaryX[0], filteredPrimaryX[filteredPrimaryX.length - 1]]);
+                                newY.push(t.y.slice());
+                            } else {
+                                newX.push(t.x.slice());
+                                newY.push(t.y.slice());
+                            }
+                        });
+
+                        if (filteredPrimaryX.length > 0) {
+                            promises.push(
+                                Plotly.restyle(id, { x: newX, y: newY })
+                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
+                                    .catch(() => {})
+                            );
+                        }
+                    });
+                }
 
                 Promise.all(promises).then(() => {
                     setTimeout(() => { State.isSyncingZoom = false; }, 50);
@@ -1917,8 +1957,11 @@
                 )
             }, { responsive: true });
 
+            const _el_plotStepX = document.getElementById('plotStepX'); if (_el_plotStepX) _el_plotStepX._fullOverviewTraces = null;
             bindZoomSync('plotStepX');
+            const _el_plotStepY = document.getElementById('plotStepY'); if (_el_plotStepY) _el_plotStepY._fullOverviewTraces = null;
             bindZoomSync('plotStepY');
+            const _el_plotAngle = document.getElementById('plotAngle'); if (_el_plotAngle) _el_plotAngle._fullOverviewTraces = null;
             bindZoomSync('plotAngle');
 
             if (!opts.skipOverview) update3DOverview();
@@ -1995,7 +2038,9 @@
                 )
             }, { responsive: true });
 
+            const _el_plotBBX = document.getElementById('plotBBX'); if (_el_plotBBX) _el_plotBBX._fullOverviewTraces = null;
             bindZoomSync('plotBBX');
+            const _el_plotBBY = document.getElementById('plotBBY'); if (_el_plotBBY) _el_plotBBY._fullOverviewTraces = null;
             bindZoomSync('plotBBY');
 
             if (!opts.skipOverview) update3DOverview();
@@ -2234,6 +2279,7 @@
                 )
             }, { responsive: true });
 
+            const _elCust = document.getElementById(chartDivId); if (_elCust) _elCust._fullOverviewTraces = null;
             bindZoomSync(chartDivId);
             if (!opts.skipOverview) update3DOverview();
         }
