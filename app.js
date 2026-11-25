@@ -251,13 +251,11 @@
             const el = document.getElementById('inp2DMarkerSize');
             return el ? (parseInt(el.value, 10) || 4) : 4;
         }
-
         function getExportFontSize() {
             const el = document.getElementById('inpExportFontSize');
             const val = el ? parseFloat(el.value) : 20;
             return (!isNaN(val) && val >= 10 && val <= 48) ? val : 20;
         }
-
         function getChartTitle(plotId, fallback = '') {
             const inputEl = document.getElementById(`title_${plotId}`);
             if (inputEl && inputEl.value.trim()) return inputEl.value.trim();
@@ -265,26 +263,19 @@
             if (State.customDims[plotId] && State.customDims[plotId].title) return State.customDims[plotId].title;
             return fallback || plotId;
         }
-
         function onChartTitleChange(plotId, value) {
             const trimmed = String(value || '').trim();
             State.chartTitles[plotId] = trimmed;
-            if (State.customDims[plotId]) {
-                State.customDims[plotId].title = trimmed || State.customDims[plotId].defaultTitle || plotId;
-            }
+            if (State.customDims[plotId]) State.customDims[plotId].title = trimmed || State.customDims[plotId].defaultTitle || plotId;
         }
         window.onChartTitleChange = onChartTitleChange;
-
         function getAllChartTitles() {
             const titles = {};
-            const defaultIds = ['plotOverview', 'plotStepX', 'plotStepY', 'plotAngle', 'plotBBX', 'plotBBY'];
-            defaultIds.forEach(id => {
+            ['plotOverview', 'plotStepX', 'plotStepY', 'plotAngle', 'plotBBX', 'plotBBY'].forEach(id => {
                 const el = document.getElementById(`title_${id}`);
                 if (el) titles[id] = el.value.trim();
             });
-            for (const id in State.customDims) {
-                titles[id] = getChartTitle(id, State.customDims[id].title);
-            }
+            for (const id in State.customDims) titles[id] = getChartTitle(id, State.customDims[id].title);
             return titles;
         }
 
@@ -494,34 +485,20 @@
                 }
 
                 // 1. Sync all other 2D charts with domain-appropriate X range
-                if (isAuto) {
-                    State.active2DCharts.forEach(id => {
-                        const otherEl = document.getElementById(id);
-                        if (!otherEl || State.hiddenCharts.has(id)) return;
-                        if (otherEl._fullOverviewTraces) {
-                            const fullX = otherEl._fullOverviewTraces.map(t => t.x);
-                            const fullY = otherEl._fullOverviewTraces.map(t => t.y);
-                            otherEl._fullOverviewTraces = null;
-                            promises.push(
-                                Plotly.restyle(id, { x: fullX, y: fullY })
-                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
-                                    .catch(() => {})
-                            );
-                        } else if (id !== plotId) {
-                            promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
-                        }
-                    });
-                } else {
-                    State.active2DCharts.forEach(id => {
-                        if (id === plotId || State.hiddenCharts.has(id)) return;
-                        const otherEl = document.getElementById(id);
-                        if (!otherEl) return;
+                State.active2DCharts.forEach(id => {
+                    if (id === plotId || State.hiddenCharts.has(id)) return;
+                    const otherEl = document.getElementById(id);
+                    if (!otherEl) return;
+
+                    if (isAuto) {
+                        promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
+                    } else {
                         const targetRange = isRawPointsChart(id) ? rawRange : apRange;
                         if (targetRange) {
                             promises.push(Plotly.relayout(id, { 'xaxis.range': targetRange }).catch(() => {}));
                         }
-                    });
-                }
+                    }
+                });
 
                 // 2. Sync 3D/2D overview explicitly to physical extents of visible points
                 const overviewEl = document.getElementById('plotOverview');
@@ -542,21 +519,14 @@
                         let cMinZ = Infinity, cMaxZ = -Infinity;
                         let foundAny = false;
 
-                        const traceX = (el.data && el.data[0] && Array.isArray(el.data[0].x)) ? el.data[0].x : null;
-                        const maxIdx = traceX ? (traceX.length - 1) : (sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1);
-                        let sIdx = Math.max(0, Math.ceil(Math.min(r0, r1)));
-                        let eIdx = Math.min(maxIdx, Math.floor(Math.max(r0, r1)));
-                        if (sIdx > eIdx && maxIdx >= 0) {
-                            const mid = Math.max(0, Math.min(maxIdx, Math.round((r0 + r1) / 2)));
-                            sIdx = mid;
-                            eIdx = mid;
-                        }
+                        const sIdx = Math.max(0, Math.floor(r0));
+                        const maxIdx = sourceIsRaw ? State.rawPoints.length - 1 : State.apertures.length - 1;
+                        const eIdx = Math.min(maxIdx, Math.ceil(r1));
 
                         if (sIdx <= eIdx && sIdx >= 0) {
                             if (sourceIsRaw) {
                                 for (let i = sIdx; i <= eIdx; i++) {
-                                    const rawIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
-                                    const pt = State.rawPoints[isNaN(rawIdx) ? i : rawIdx];
+                                    const pt = State.rawPoints[i];
                                     if (!pt) continue;
                                     if (pt.x < cMinX) cMinX = pt.x;
                                     if (pt.x > cMaxX) cMaxX = pt.x;
@@ -568,8 +538,7 @@
                                 }
                             } else {
                                 for (let i = sIdx; i <= eIdx; i++) {
-                                    const apIdx = traceX ? parseInt(String(traceX[i]), 10) : i;
-                                    const ap = State.apertures[isNaN(apIdx) ? i : apIdx];
+                                    const ap = State.apertures[i];
                                     if (!ap) continue;
                                     for (const pt of ap) {
                                         if (pt.x < cMinX) cMinX = pt.x;
@@ -596,46 +565,19 @@
                             const padY = Math.max(dy * 0.1, 0.05 * Math.max(dx, dy, 1));
                             const padZ = Math.max(dz * 0.1, 0.05 * Math.max(dx, dy, dz, 1));
 
-                            const fitEqualAxesRanges = (x0, x1, y0, y1) => {
-                                if (!State.isEqualAxes) return [[x0, x1], [y0, y1]];
-                                const sz = overviewEl._fullLayout && overviewEl._fullLayout._size;
-                                const aspect = (sz && sz.w > 0 && sz.h > 0) ? (sz.w / sz.h) : 1;
-                                const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-                                let spanX = Math.max(x1 - x0, 1e-4);
-                                let spanY = Math.max(y1 - y0, 1e-4);
-                                if (spanX / spanY < aspect) {
-                                    spanX = spanY * aspect;
-                                } else {
-                                    spanY = spanX / aspect;
-                                }
-                                return [[mx - spanX / 2, mx + spanX / 2], [my - spanY / 2, my + spanY / 2]];
-                            };
-
                             if (State.overviewView === 'iso') {
-                                update3D['scene.xaxis.autorange'] = false;
-                                update3D['scene.yaxis.autorange'] = false;
-                                update3D['scene.zaxis.autorange'] = false;
                                 update3D['scene.xaxis.range'] = [cMinX - padX, cMaxX + padX];
                                 update3D['scene.yaxis.range'] = [cMinY - padY, cMaxY + padY];
                                 update3D['scene.zaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             } else if (State.overviewView === 'xy') {
-                                const [xr, yr] = fitEqualAxesRanges(cMinX - padX, cMaxX + padX, cMinY - padY, cMaxY + padY);
-                                update3D['xaxis.autorange'] = false;
-                                update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = xr;
-                                update3D['yaxis.range'] = yr;
+                                update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
+                                update3D['yaxis.range'] = [cMinY - padY, cMaxY + padY];
                             } else if (State.overviewView === 'xz') {
-                                const [xr, yr] = fitEqualAxesRanges(cMinX - padX, cMaxX + padX, cMinZ - padZ, cMaxZ + padZ);
-                                update3D['xaxis.autorange'] = false;
-                                update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = xr;
-                                update3D['yaxis.range'] = yr;
+                                update3D['xaxis.range'] = [cMinX - padX, cMaxX + padX];
+                                update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             } else if (State.overviewView === 'yz') {
-                                const [xr, yr] = fitEqualAxesRanges(cMinY - padY, cMaxY + padY, cMinZ - padZ, cMaxZ + padZ);
-                                update3D['xaxis.autorange'] = false;
-                                update3D['yaxis.autorange'] = false;
-                                update3D['xaxis.range'] = xr;
-                                update3D['yaxis.range'] = yr;
+                                update3D['xaxis.range'] = [cMinY - padY, cMaxY + padY];
+                                update3D['yaxis.range'] = [cMinZ - padZ, cMaxZ + padZ];
                             }
                         }
                     }
@@ -708,27 +650,14 @@
                 if (!hasBounds && !isAuto) return;
 
                 State.isSyncingZoom = true;
-                const promises = [];
+                let apUpdate = null;
+                let rawUpdate = null;
 
                 if (isAuto) {
-                    State.active2DCharts.forEach(id => {
-                        const otherEl = document.getElementById(id);
-                        if (!otherEl || State.hiddenCharts.has(id)) return;
-                        if (otherEl._fullOverviewTraces) {
-                            const fullX = otherEl._fullOverviewTraces.map(t => t.x);
-                            const fullY = otherEl._fullOverviewTraces.map(t => t.y);
-                            otherEl._fullOverviewTraces = null;
-                            promises.push(
-                                Plotly.restyle(id, { x: fullX, y: fullY })
-                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
-                                    .catch(() => {})
-                            );
-                        } else {
-                            promises.push(Plotly.relayout(id, { 'xaxis.autorange': true }).catch(() => {}));
-                        }
-                    });
+                    apUpdate = { 'xaxis.autorange': true };
+                    rawUpdate = { 'xaxis.autorange': true };
                 } else {
-                    const visibleApSet = new Set();
+                    let minIdx = Infinity, maxIdx = -Infinity;
                     State.centroids.forEach((c, idx) => {
                         const inX = c.x >= xMin && c.x <= xMax;
                         const inY = c.y >= yMin && c.y <= yMax;
@@ -738,63 +667,37 @@
                         else if (State.overviewView === 'xz') isVisible = inX && inZ;
                         else if (State.overviewView === 'yz') isVisible = inY && inZ;
                         else isVisible = inX && inY && inZ;
-                        if (isVisible) visibleApSet.add(idx);
+
+                        if (isVisible) {
+                            if (idx < minIdx) minIdx = idx;
+                            if (idx > maxIdx) maxIdx = idx;
+                        }
                     });
 
-                    if (visibleApSet.size === 0) {
+                    if (minIdx === Infinity) {
                         State.isSyncingZoom = false;
                         return;
                     }
 
-                    State.active2DCharts.forEach(id => {
-                        const otherEl = document.getElementById(id);
-                        if (!otherEl || !otherEl.data || State.hiddenCharts.has(id)) return;
-
-                        if (!otherEl._fullOverviewTraces) {
-                            otherEl._fullOverviewTraces = otherEl.data.map(t => ({
-                                x: Array.isArray(t.x) ? t.x.slice() : [],
-                                y: Array.isArray(t.y) ? t.y.slice() : []
-                            }));
-                        }
-
-                        const rawMode = isRawPointsChart(id);
-                        const baseTraces = otherEl._fullOverviewTraces;
-                        const newX = [];
-                        const newY = [];
-                        let filteredPrimaryX = [];
-
-                        baseTraces.forEach((t, tIdx) => {
-                            if (tIdx === 0) {
-                                const fx = [];
-                                const fy = [];
-                                for (let i = 0; i < t.x.length; i++) {
-                                    const apIdx = rawMode ? State.pointToApertureMap[i] : i;
-                                    if (visibleApSet.has(apIdx)) {
-                                        fx.push(t.x[i]);
-                                        fy.push(t.y[i]);
-                                    }
-                                }
-                                filteredPrimaryX = fx;
-                                newX.push(fx);
-                                newY.push(fy);
-                            } else if (t.x.length === 2 && filteredPrimaryX.length > 0) {
-                                newX.push([filteredPrimaryX[0], filteredPrimaryX[filteredPrimaryX.length - 1]]);
-                                newY.push(t.y.slice());
-                            } else {
-                                newX.push(t.x.slice());
-                                newY.push(t.y.slice());
-                            }
-                        });
-
-                        if (filteredPrimaryX.length > 0) {
-                            promises.push(
-                                Plotly.restyle(id, { x: newX, y: newY })
-                                    .then(() => Plotly.relayout(id, { 'xaxis.autorange': true }))
-                                    .catch(() => {})
-                            );
-                        }
-                    });
+                    apUpdate = { 'xaxis.range': [minIdx - 0.5, maxIdx + 0.5] };
+                    if (State.aperturePointRanges[minIdx] && State.aperturePointRanges[maxIdx]) {
+                        rawUpdate = {
+                            'xaxis.range': [
+                                State.aperturePointRanges[minIdx].start - 0.5,
+                                State.aperturePointRanges[maxIdx].end + 0.5
+                            ]
+                        };
+                    }
                 }
+
+                const promises = [];
+                State.active2DCharts.forEach(id => {
+                    const otherEl = document.getElementById(id);
+                    if (otherEl && !State.hiddenCharts.has(id)) {
+                        const upd = isRawPointsChart(id) ? rawUpdate : apUpdate;
+                        if (upd) promises.push(Plotly.relayout(id, upd).catch(() => {}));
+                    }
+                });
 
                 Promise.all(promises).then(() => {
                     setTimeout(() => { State.isSyncingZoom = false; }, 50);
@@ -1991,11 +1894,8 @@
                 )
             }, { responsive: true });
 
-            const _el_plotStepX = document.getElementById('plotStepX'); if (_el_plotStepX) _el_plotStepX._fullOverviewTraces = null;
             bindZoomSync('plotStepX');
-            const _el_plotStepY = document.getElementById('plotStepY'); if (_el_plotStepY) _el_plotStepY._fullOverviewTraces = null;
             bindZoomSync('plotStepY');
-            const _el_plotAngle = document.getElementById('plotAngle'); if (_el_plotAngle) _el_plotAngle._fullOverviewTraces = null;
             bindZoomSync('plotAngle');
 
             if (!opts.skipOverview) update3DOverview();
@@ -2072,9 +1972,7 @@
                 )
             }, { responsive: true });
 
-            const _el_plotBBX = document.getElementById('plotBBX'); if (_el_plotBBX) _el_plotBBX._fullOverviewTraces = null;
             bindZoomSync('plotBBX');
-            const _el_plotBBY = document.getElementById('plotBBY'); if (_el_plotBBY) _el_plotBBY._fullOverviewTraces = null;
             bindZoomSync('plotBBY');
 
             if (!opts.skipOverview) update3DOverview();
@@ -2313,7 +2211,6 @@
                 )
             }, { responsive: true });
 
-            const _elCust = document.getElementById(chartDivId); if (_elCust) _elCust._fullOverviewTraces = null;
             bindZoomSync(chartDivId);
             if (!opts.skipOverview) update3DOverview();
         }
@@ -2352,7 +2249,7 @@
             return inp;
         }
 
-        function addDimensionChartProgrammatic(config, nom = '', t1 = '', t2 = '', t3 = '', fMin = '', fMax = '', yMin = '', yMax = '', customTitle = '') {
+        function addDimensionChartProgrammatic(config, nom = '', t1 = '', t2 = '', t3 = '', fMin = '', fMax = '', yMin = '', yMax = '') {
             const result = computeCustomDimData(config);
             if (!result) return;
 
@@ -2390,18 +2287,9 @@
 
             const titleWrap = document.createElement('div');
             titleWrap.className = 'w-full break-words min-w-0 pr-8';
-            const resolvedTitle = (customTitle && String(customTitle).trim()) ? String(customTitle).trim() : result.title;
-            State.customDims[chartDivId].defaultTitle = result.title;
-            State.customDims[chartDivId].title = resolvedTitle;
-            State.chartTitles[chartDivId] = resolvedTitle;
-            const h4 = document.createElement('input');
-            h4.type = 'text';
-            h4.id = `title_${chartDivId}`;
-            h4.value = resolvedTitle;
-            h4.setAttribute('aria-label', 'Edit custom chart title');
-            h4.title = 'Click to edit chart title';
-            h4.className = 'chart-title-input font-medium text-slate-700 dark:text-slate-200 text-sm w-full';
-            h4.addEventListener('input', (e) => onChartTitleChange(chartDivId, e.target.value));
+            const h4 = document.createElement('h4');
+            h4.className = 'font-medium text-slate-700 dark:text-slate-200 text-sm';
+            h4.textContent = result.title;
             const statsDiv = document.createElement('div');
             statsDiv.id = `stats_${chartDivId}`;
             statsDiv.className = 'text-[11px] font-medium text-slate-600 dark:text-slate-400 mt-1.5 bg-slate-100/80 dark:bg-slate-700/50 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 transition-colors';
@@ -2621,8 +2509,6 @@
                 darkTheme: document.documentElement.classList.contains('dark'),
                 layoutMode: document.getElementById('selLayoutMode').value,
                 point2DSize: document.getElementById('inp2DMarkerSize').value,
-                exportFontSize: getExportFontSize(),
-                chartTitles: getAllChartTitles(),
                 hiddenCharts: Array.from(State.hiddenCharts),
                 logoDataUrl: State.logoDataUrl,
                 logoFormat: State.logoFormat,
@@ -2655,7 +2541,6 @@
                 const idx = id.split('_')[1];
                 settings.customDimsConfig.push({
                     config: dim.config,
-                    title: getChartTitle(id, dim.title),
                     nom: document.getElementById(`nomDim_${idx}`)?.value || '',
                     t1: document.getElementById(`tol1Dim_${idx}`)?.value || '',
                     t2: document.getElementById(`tol2Dim_${idx}`)?.value || '',
@@ -2742,16 +2627,6 @@
                         updateLayoutMode();
                     }
                     if (settings.point2DSize !== undefined) setVal('inp2DMarkerSize', settings.point2DSize);
-                    if (settings.exportFontSize !== undefined) setVal('inpExportFontSize', settings.exportFontSize);
-                    if (settings.chartTitles && typeof settings.chartTitles === 'object') {
-                        Object.entries(settings.chartTitles).forEach(([pid, titleVal]) => {
-                            if (typeof titleVal === 'string' && titleVal.trim()) {
-                                State.chartTitles[pid] = titleVal.trim();
-                                const titleInput = document.getElementById(`title_${pid}`);
-                                if (titleInput) titleInput.value = titleVal.trim();
-                            }
-                        });
-                    }
 
                     if (settings.logoDataUrl) {
                         State.logoDataUrl = settings.logoDataUrl;
@@ -2818,25 +2693,17 @@
                                 dim.config,
                                 dim.nom, dim.t1, dim.t2, dim.t3,
                                 dim.fMin, dim.fMax,
-                                dim.yMin, dim.yMax,
-                                dim.title || ''
+                                dim.yMin, dim.yMax
                             );
                         });
                     } else {
                         UI.emptyDimensionMsg.classList.remove('hidden');
                     }
 
-                    // Always schedule automatic blue σ recalculation on config load
-                    State.autoSigmaOnNextProcess = true;
+                    // Automatically invoke the blue σ recalculation when data is present
                     if (State.originalRawPoints && State.originalRawPoints.length > 0) {
+                        State.autoSigmaOnNextProcess = true;
                         applyModificationsAndProcess();
-                        autoRunConfiguredSigmaTolerances();
-                        renderStepPlots({ skipOverview: true });
-                        renderBBPlots({ skipOverview: true });
-                        for (let i = 1; i <= State.dimensionCharts; i++) {
-                            if (State.customDims[`dimChart_${i}`]) renderCustomDimChart(i, { skipOverview: true });
-                        }
-                        update3DOverview();
                     } else {
                         updateAllChartsTheme();
                     }
@@ -3020,45 +2887,30 @@
             const metric = metricId ? State.metricsData[metricId] : null;
             const esc = (s) => String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            const baseFont = getExportFontSize();
-            const titleFontSize = Math.round(baseFont * 1.4);
-            const sub1FontSize = Math.round(baseFont * 1.0);
-            const sub2FontSize = Math.round(baseFont * 0.9);
-            const axisTitleSize = Math.round(baseFont * 1.15);
-            const axisTickSize = baseFont;
-            const legendFontSize = Math.round(baseFont * 0.9);
-            const resolvedTitle = getChartTitle(plotId, chartTitle || plotId);
-
-            let titleHtml = `<b>${esc(resolvedTitle)}</b>`;
-            let titleBlockHeight = Math.round(titleFontSize * 1.45);
+            let titleHtml = `<b>${esc(chartTitle || plotId)}</b>`;
             if (metric) {
                 const nomText = !isNaN(metric.nom) ? `${metric.nom.toFixed(3)}${metric.unit}` : '--';
                 const line1 = `Avg: ${metric.avg.toFixed(3)}${metric.unit}   |   Nom: ${nomText}`;
                 const line2 = formatMetricFailsSummary(metric);
-                titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
-                titleHtml += `<br><span style="font-size:${sub2FontSize}px;color:${subColor}">${esc(line2)}</span>`;
-                titleBlockHeight += Math.round((sub1FontSize + sub2FontSize) * 1.45);
+                titleHtml += `<br><span style="font-size:22px;color:${subColor}">${esc(line1)}</span>`;
+                titleHtml += `<br><span style="font-size:19px;color:${subColor}">${esc(line2)}</span>`;
             } else if (plotId === 'plotOverview') {
                 const partNo = UI.inpPartNum.value.trim() || 'N/A';
                 const serialNo = UI.inpSerialNum.value.trim() || 'N/A';
                 const line1 = `Part: ${partNo}   |   Serial: ${serialNo}   |   Points: ${State.rawPoints.length}   |   Apertures: ${State.apertures.length}`;
-                titleHtml += `<br><span style="font-size:${sub1FontSize}px;color:${subColor}">${esc(line1)}</span>`;
-                titleBlockHeight += Math.round(sub1FontSize * 1.45);
+                titleHtml += `<br><span style="font-size:20px;color:${subColor}">${esc(line1)}</span>`;
             }
 
-            const titlePadTop = Math.round(titleFontSize * 0.8 + 28);
             exportLayout.title = {
                 text: titleHtml,
-                font: { size: titleFontSize, color: theme.fontColor },
+                font: { size: 32, color: theme.fontColor },
                 x: 0.5,
                 xanchor: 'center',
-                y: 0.96,
-                yref: 'container',
-                yanchor: 'top',
-                pad: { t: titlePadTop, b: Math.round(baseFont * 0.6) }
+                y: 0.97,
+                yanchor: 'top'
             };
 
-            const scaleAxisFonts = (ax, titleSize = axisTitleSize, tickSize = axisTickSize, enableAutoMargin = true) => {
+            const scaleAxisFonts = (ax, titleSize = 24, tickSize = 20) => {
                 if (!ax) return;
                 if (typeof ax.title === 'string') {
                     ax.title = { text: ax.title };
@@ -3066,45 +2918,38 @@
                     ax.title = ax.title || {};
                 }
                 ax.title.font = { ...(ax.title.font || {}), size: titleSize, color: theme.fontColor };
-                ax.title.standoff = Math.max(16, Math.round(baseFont * 0.85));
+                ax.title.standoff = 22;
                 ax.tickfont = { ...(ax.tickfont || {}), size: tickSize, color: theme.fontColor };
-                if (enableAutoMargin) ax.automargin = true;
             };
 
-            exportLayout.font = { ...(exportLayout.font || {}), size: baseFont, color: theme.fontColor };
-            scaleAxisFonts(exportLayout.xaxis, axisTitleSize, axisTickSize, true);
-            scaleAxisFonts(exportLayout.yaxis, axisTitleSize, axisTickSize, true);
+            exportLayout.font = { ...(exportLayout.font || {}), size: 20, color: theme.fontColor };
+            scaleAxisFonts(exportLayout.xaxis, 24, 20);
+            scaleAxisFonts(exportLayout.yaxis, 24, 20);
             if (exportLayout.scene) {
-                scaleAxisFonts(exportLayout.scene.xaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
-                scaleAxisFonts(exportLayout.scene.yaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
-                scaleAxisFonts(exportLayout.scene.zaxis, Math.round(baseFont * 1.05), Math.round(baseFont * 0.8), false);
+                scaleAxisFonts(exportLayout.scene.xaxis, 22, 16);
+                scaleAxisFonts(exportLayout.scene.yaxis, 22, 16);
+                scaleAxisFonts(exportLayout.scene.zaxis, 22, 16);
             }
             if (exportLayout.legend) {
-                exportLayout.legend.font = { ...(exportLayout.legend.font || {}), size: legendFontSize, color: theme.fontColor };
+                exportLayout.legend.font = { ...(exportLayout.legend.font || {}), size: 18, color: theme.fontColor };
             }
 
-            const user2DSize = get2DMarkerSize();
+            // Slightly boost trace line/marker/label legibility on the 1600px export canvas
             exportData.forEach(trace => {
                 if (plotId === 'plotOverview') {
-                    if (trace.textfont) trace.textfont.size = Math.max(trace.textfont.size || 12, Math.round(baseFont * 0.9));
+                    if (trace.textfont) trace.textfont.size = Math.max(trace.textfont.size || 12, 18);
                 } else {
-                    if (trace.line) trace.line.width = Math.max(trace.line.width || 2, 2.5);
-                    if (trace.marker) trace.marker.size = user2DSize;
+                    if (trace.line) trace.line.width = Math.max(trace.line.width || 2, 3);
+                    if (trace.marker && trace.marker.size) trace.marker.size = Math.max(trace.marker.size, 8);
                 }
             });
 
-            const topMargin = Math.max(160, titlePadTop + titleBlockHeight + Math.round(baseFont * 1.0) + 45);
-            const leftMargin = Math.max(120, Math.round(axisTitleSize + axisTickSize * 3.2 + 45));
-            const rightMargin = Math.max(60, Math.round(baseFont * 1.5 + 30));
-            const bottomMargin = Math.max(105, Math.round(axisTitleSize + axisTickSize * 2.2 + 45));
-            const marginPad = Math.max(10, Math.round(baseFont * 0.35));
-
             if (plotId === 'plotOverview') {
                 exportLayout.margin = exportLayout.scene
-                    ? { l: 30, r: 30, b: 30, t: topMargin, pad: marginPad }
-                    : { l: leftMargin, r: rightMargin, b: bottomMargin, t: topMargin, pad: marginPad };
+                    ? { l: 20, r: 20, b: 20, t: 120 }
+                    : { l: 120, r: 45, b: 100, t: 120 };
             } else {
-                exportLayout.margin = { l: leftMargin, r: rightMargin, b: bottomMargin, t: topMargin, pad: marginPad };
+                exportLayout.margin = { l: 120, r: 45, b: 115, t: 145 };
             }
 
             return { data: exportData, layout: exportLayout };
@@ -3116,11 +2961,10 @@
             const el = document.getElementById(plotId);
             if (!el || !el.layout) return;
 
-            const resolvedTitle = getChartTitle(plotId, chartTitle);
-            const safeFilename = `${partNum}_${serialNum}_${sanitizeFilenamePart(resolvedTitle)}.png`;
-            const pxW = plotId === 'plotOverview' ? 1600 : 2400;
-            const pxH = plotId === 'plotOverview' ? 1200 : 800;
-            const payload = buildExportChartPayload(el, plotId, resolvedTitle);
+            const safeFilename = `${partNum}_${serialNum}_${sanitizeFilenamePart(chartTitle)}.png`;
+            const pxW = 1600;
+            const pxH = plotId === 'plotOverview' ? 1200 : 900;
+            const payload = buildExportChartPayload(el, plotId, chartTitle);
             const pngDataUrl = await Plotly.toImage(payload, { format: 'png', width: pxW, height: pxH });
 
             const a = document.createElement('a');
@@ -3133,14 +2977,13 @@
         window.downloadPlot = downloadPlot;
 
         function getExportablePlots(printWidth) {
-            const chart2DHeight = Math.round(printWidth / 3);
             const plots = [
-                { id: 'plotOverview', metricId: null, title: getChartTitle('plotOverview', '3D Array Overview'), h: Math.min(printWidth * 0.82, 145) },
-                { id: 'plotStepX', metricId: 'stepX', title: getChartTitle('plotStepX', 'X-Lattice'), h: chart2DHeight },
-                { id: 'plotStepY', metricId: 'stepY', title: getChartTitle('plotStepY', 'Y-Lattice'), h: chart2DHeight },
-                { id: 'plotAngle', metricId: 'angle', title: getChartTitle('plotAngle', 'Lattice Angle'), h: chart2DHeight },
-                { id: 'plotBBX', metricId: 'bbX', title: getChartTitle('plotBBX', 'Aperture Width'), h: chart2DHeight },
-                { id: 'plotBBY', metricId: 'bbY', title: getChartTitle('plotBBY', 'Aperture Height'), h: chart2DHeight }
+                { id: 'plotOverview', metricId: null, title: '3D Array Overview', h: Math.min(printWidth * 0.82, 145) },
+                { id: 'plotStepX', metricId: 'stepX', title: 'X-Lattice Stepping', h: 80 },
+                { id: 'plotStepY', metricId: 'stepY', title: 'Y-Lattice Stepping', h: 80 },
+                { id: 'plotAngle', metricId: 'angle', title: 'Lattice Angle', h: 80 },
+                { id: 'plotBBX', metricId: 'bbX', title: 'Aperture Width', h: 80 },
+                { id: 'plotBBY', metricId: 'bbY', title: 'Aperture Height', h: 80 }
             ].filter(p => p.id === 'plotOverview' || !State.hiddenCharts.has(p.id));
 
             for (let i = 1; i <= State.dimensionCharts; i++) {
@@ -3149,8 +2992,8 @@
                     plots.push({
                         id: chartDivId,
                         metricId: chartDivId,
-                        title: getChartTitle(chartDivId, State.customDims[chartDivId].title || `Custom Dimension ${i}`),
-                        h: chart2DHeight
+                        title: State.customDims[chartDivId].title || `Custom Dimension ${i}`,
+                        h: 80
                     });
                 }
             }
@@ -3294,21 +3137,13 @@
                     if (trace.textfont) trace.textfont.color = '#1e293b';
                 });
 
-                const basePdfFont = getExportFontSize();
-                const user2DSizePdf = get2DMarkerSize();
-                if (p.id !== 'plotOverview') {
-                    exportData.forEach(trace => {
-                        if (trace.marker) trace.marker.size = user2DSizePdf;
-                    });
-                }
                 const exportLayout = JSON.parse(JSON.stringify(plotEl.layout || {}));
-                const scaleFont = (ax, enableAutoMargin = true) => {
+                const scaleFont = (ax) => {
                     if (!ax) return;
                     ax.title = ax.title || {};
-                    ax.title.font = { size: Math.round(basePdfFont * 1.25), color: '#334155' };
-                    ax.title.standoff = Math.max(18, Math.round(basePdfFont * 1.0));
-                    ax.tickfont = { size: basePdfFont, color: '#475569' };
-                    if (enableAutoMargin) ax.automargin = true;
+                    ax.title.font = { size: 30, color: '#334155' };
+                    ax.title.standoff = 40;
+                    ax.tickfont = { size: 24, color: '#475569' };
                 };
 
                 scaleFont(exportLayout.xaxis);
@@ -3319,7 +3154,7 @@
                     scaleFont(exportLayout.scene.zaxis);
                 }
 
-                exportLayout.margin = { l: Math.max(120, Math.round(basePdfFont * 4.5 + 40)), r: Math.max(55, Math.round(basePdfFont * 1.5 + 25)), b: Math.max(105, Math.round(basePdfFont * 3.5 + 40)), t: Math.max(30, Math.round(basePdfFont * 1.2)), pad: Math.max(8, Math.round(basePdfFont * 0.35)) };
+                exportLayout.margin = { l: 160, r: 50, b: 160, t: 20 };
                 exportLayout.paper_bgcolor = '#ffffff';
                 exportLayout.plot_bgcolor = '#f8fafc';
                 exportLayout.font = { ...exportLayout.font, color: '#334155' };
@@ -3337,8 +3172,8 @@
                     }
                 }
 
-                const pxWidth = p.id === 'plotOverview' ? 1800 : 2400;
-                const pxHeight = p.id === 'plotOverview' ? Math.round((p.h / printWidth) * pxWidth) : 800;
+                const pxWidth = 2000;
+                const pxHeight = Math.round((p.h / printWidth) * pxWidth);
                 const imgUrl = await Plotly.toImage({ data: exportData, layout: exportLayout }, { format: 'jpeg', width: pxWidth, height: pxHeight });
 
                 doc.addImage(imgUrl, 'JPEG', margin, cursorY, printWidth, p.h);
@@ -3536,8 +3371,8 @@
                     const plotEl = document.getElementById(p.id);
                     if (!plotEl || !plotEl.layout) continue;
 
-                    const pxW = p.id === 'plotOverview' ? 1600 : 2400;
-                    const pxH = p.id === 'plotOverview' ? 1200 : 800;
+                    const pxW = 1600;
+                    const pxH = p.id === 'plotOverview' ? 1200 : 900;
                     const payload = buildExportChartPayload(plotEl, p.id, p.title);
                     const pngDataUrl = await Plotly.toImage(payload, {
                         format: 'png',
@@ -3618,10 +3453,7 @@
          * ========================================================================= */
         UI.fileInput.addEventListener('change', handleFileUpload);
         UI.btnLoadSample.addEventListener('click', generateSampleData);
-        UI.btnProcess.addEventListener('click', () => {
-            State.autoSigmaOnNextProcess = true;
-            applyModificationsAndProcess();
-        });
+        UI.btnProcess.addEventListener('click', () => { State.autoSigmaOnNextProcess = true; applyModificationsAndProcess(); });
         UI.btnToggleSidebar.addEventListener('click', toggleSidebar);
         UI.selLayoutMode.addEventListener('change', updateLayoutMode);
         UI.selDimMode.addEventListener('change', toggleDimMode);
@@ -3678,3 +3510,42 @@
             updateAllChartsTheme();
             loadLastDirHandle();
         });
+/* =========================================================================
+         * PWA Install Prompt & Service Worker Registration
+         * ========================================================================= */
+        (function initPWA() {
+            let deferredInstallPrompt = null;
+            const btnInstall = document.getElementById('btnInstallApp');
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js').catch(() => {});
+                });
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredInstallPrompt = e;
+                if (btnInstall) btnInstall.classList.remove('hidden');
+            });
+
+            if (btnInstall) {
+                btnInstall.addEventListener('click', async () => {
+                    if (!deferredInstallPrompt) return;
+                    deferredInstallPrompt.prompt();
+                    try {
+                        await deferredInstallPrompt.userChoice;
+                    } catch (_) {}
+                    deferredInstallPrompt = null;
+                    btnInstall.classList.add('hidden');
+                });
+            }
+
+            window.addEventListener('appinstalled', () => {
+                deferredInstallPrompt = null;
+                if (btnInstall) btnInstall.classList.add('hidden');
+                if (typeof showNotification === 'function') {
+                    showNotification('App installed successfully.', 'success');
+                }
+            });
+        })();

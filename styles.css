@@ -28,33 +28,12 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
             border-radius: 0.25rem;
             border-width: 1px;
         }
-/* Standard scrollbar styling for Firefox */
-.custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f1f1;
-}
-.dark .custom-scrollbar {
-    scrollbar-color: #475569 #1e293b;
-}
-
-/* Seamless inline-editable chart titles */
+.custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f1f1; }
+.dark .custom-scrollbar { scrollbar-color: #475569 #1e293b; }
 .chart-title-input {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 0.25rem;
-    padding: 0.1rem 0.35rem;
-    font: inherit;
-    color: inherit;
-    min-width: 8rem;
-    max-width: 100%;
+    background: transparent; border: 1px solid transparent; border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem; font: inherit; color: inherit; min-width: 8rem; max-width: 100%;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.chart-title-input:hover {
-    border-color: rgba(148, 163, 184, 0.5);
-    background-color: rgba(148, 163, 184, 0.08);
-}
-.chart-title-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    background-color: rgba(59, 130, 246, 0.08);
-}
+.chart-title-input:hover { border-color: rgba(148, 163, 184, 0.5); background-color: rgba(148, 163, 184, 0.08); }
+.chart-title-input:focus { outline: none; border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.08); }

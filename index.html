@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aperture Tolerance Analyzer - AF Engineering Tools</title>
+    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="manifest" href="./manifest.webmanifest">
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,7 +48,7 @@
         <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-center transition-colors">
             <div class="min-w-0 pr-2">
                 <h1 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight truncate">
-                    <i class="fa-solid fa-layer-group text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true"></i>
+                    <img src="./icon.svg" alt="O-Detect-Reader-PLUS logo" class="w-6 h-6 shrink-0 rounded">
                     <span class="truncate">Aperture Tolerance Analyzer</span>
                 </h1>
                 <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 uppercase tracking-wider font-semibold truncate" id="sidebarCompanyText">AF ENGINEERING TOOLS</p>
@@ -233,9 +237,14 @@
 
         <!-- Toolbar -->
         <div class="flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 shrink-0 sticky top-0 z-30 transition-colors gap-2 flex-wrap">
-            <button type="button" id="btnToggleSidebar" aria-label="Toggle Sidebar Menu" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-2 font-medium text-sm border border-slate-300 dark:border-slate-600 shadow-sm" title="Toggle Sidebar">
-                <i class="fa-solid fa-bars-staggered" aria-hidden="true"></i> <span class="hidden sm:inline">Toggle Menu</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="btnToggleSidebar" type="button" aria-label="Toggle Sidebar Menu" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-2 font-medium text-sm border border-slate-300 dark:border-slate-600 shadow-sm" title="Toggle Sidebar">
+                    <i class="fa-solid fa-bars-staggered" aria-hidden="true"></i> <span class="hidden sm:inline">Toggle Menu</span>
+                </button>
+                <button id="btnInstallApp" type="button" aria-label="Install App" class="hidden px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md text-white transition-colors flex items-center gap-2 font-medium text-sm shadow-sm" title="Install as desktop/mobile app">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> <span class="hidden sm:inline">Install App</span>
+                </button>
+            </div>
 
             <div class="flex items-center gap-3 flex-wrap">
                 <button type="button" id="btnRestoreCharts" onclick="restoreDefaultCharts()" class="hidden text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline mr-1"><i class="fa-solid fa-rotate-left mr-1" aria-hidden="true"></i> Restore Hidden Charts</button>
